@@ -1,0 +1,33 @@
+{
+  "": {
+    "swift-dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/primary.swiftdeps"
+  },
+  "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/ConsentTests.swift": {
+    "dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests.d",
+    "object": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests.swift.o",
+    "swiftmodule": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests.swiftdeps",
+    "diagnostics": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests.dia"
+  },
+  "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/DeviceIdentifierTests.swift": {
+    "dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests.d",
+    "object": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests.swift.o",
+    "swiftmodule": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests.swiftdeps",
+    "diagnostics": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests.dia"
+  },
+  "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/EventQueueTests.swift": {
+    "dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests.d",
+    "object": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests.swift.o",
+    "swiftmodule": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests.swiftdeps",
+    "diagnostics": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests.dia"
+  },
+  "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/NetworkClientTests.swift": {
+    "dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests.d",
+    "object": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests.swift.o",
+    "swiftmodule": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests~partial.swiftmodule",
+    "swift-dependencies": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests.swiftdeps",
+    "diagnostics": "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests.dia"
+  }
+}

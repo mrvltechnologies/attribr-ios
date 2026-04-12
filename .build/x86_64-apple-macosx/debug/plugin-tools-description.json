@@ -1,0 +1,773 @@
+{
+  "builtTestProducts" : [
+    {
+      "binaryPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.xctest/Contents/MacOS/AttribrPackageTests",
+      "packagePath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift",
+      "productName" : "AttribrPackageTests"
+    }
+  ],
+  "copyCommands" : {
+
+  },
+  "explicitTargetDependencyImportCheckingMode" : {
+    "none" : {
+
+    }
+  },
+  "generatedSourceTargetSet" : [
+
+  ],
+  "pluginDescriptions" : [
+
+  ],
+  "swiftCommands" : {
+    "C.Attribr-x86_64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/sources",
+      "importPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Attribr.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Configuration.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Consent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/DeviceIdentifier.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/EventQueue.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Logger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/NetworkClient.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "Attribr",
+      "moduleOutputPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/Attribr.swiftmodule",
+      "objects" : [
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Attribr.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Configuration.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Consent.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/DeviceIdentifier.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/EventQueue.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Logger.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/NetworkClient.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/include/Attribr-Swift.h",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "swift"
+      ],
+      "outputFileMapPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Attribr.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Configuration.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Consent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/DeviceIdentifier.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/EventQueue.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Logger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/NetworkClient.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/Attribr.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Attribr.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Configuration.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Consent.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/DeviceIdentifier.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/EventQueue.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Logger.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/NetworkClient.swift"
+      ],
+      "tempsPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.AttribrPackageTests-x86_64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/sources",
+      "importPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.derived/runner.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/AttribrTests.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "AttribrPackageTests",
+      "moduleOutputPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/AttribrPackageTests.swiftmodule",
+      "objects" : [
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/runner.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-emit-objc-header",
+        "-emit-objc-header-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/include/AttribrPackageTests-Swift.h",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "swift"
+      ],
+      "outputFileMapPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/AttribrPackageTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.derived/runner.swift"
+      ],
+      "tempsPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build",
+      "wholeModuleOptimization" : false
+    },
+    "C.AttribrTests-x86_64-apple-macosx-debug.module" : {
+      "executable" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "fileList" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/sources",
+      "importPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules",
+      "inputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/ConsentTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/DeviceIdentifierTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/EventQueueTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/NetworkClientTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/Attribr.swiftmodule"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/sources"
+        }
+      ],
+      "isLibrary" : true,
+      "moduleName" : "AttribrTests",
+      "moduleOutputPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/AttribrTests.swiftmodule",
+      "objects" : [
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests.swift.o",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests.swift.o"
+      ],
+      "otherArguments" : [
+        "-target",
+        "x86_64-apple-macosx14.0",
+        "-incremental",
+        "-enable-batch-mode",
+        "-serialize-diagnostics",
+        "-index-store-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/index/store",
+        "-Onone",
+        "-enable-testing",
+        "-Xfrontend",
+        "-enable-cross-import-overlays",
+        "-j8",
+        "-DSWIFT_PACKAGE",
+        "-DDEBUG",
+        "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+        "-module-cache-path",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/ModuleCache",
+        "-parseable-output",
+        "-parse-as-library",
+        "-swift-version",
+        "6",
+        "-plugin-path",
+        "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+        "-sdk",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-F",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-I",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-L",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+        "-g",
+        "-Xcc",
+        "-isysroot",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+        "-Xcc",
+        "-F",
+        "-Xcc",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+        "-Xcc",
+        "-fPIC",
+        "-Xcc",
+        "-g",
+        "-package-name",
+        "swift"
+      ],
+      "outputFileMapPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/output-file-map.json",
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules/AttribrTests.swiftmodule"
+        }
+      ],
+      "prepareForIndexing" : false,
+      "sources" : [
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/ConsentTests.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/DeviceIdentifierTests.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/EventQueueTests.swift",
+        "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/NetworkClientTests.swift"
+      ],
+      "tempsPath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build",
+      "wholeModuleOptimization" : false
+    }
+  },
+  "swiftFrontendCommands" : {
+
+  },
+  "swiftTargetScanArgs" : {
+    "Attribr" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "Attribr",
+      "-package-name",
+      "swift",
+      "-c",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Attribr.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Configuration.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Consent.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/DeviceIdentifier.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/EventQueue.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Logger.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/NetworkClient.swift",
+      "-I",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules",
+      "-target",
+      "x86_64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/include/Attribr-Swift.h",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "swift",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "AttribrPackageTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "AttribrPackageTests",
+      "-package-name",
+      "swift",
+      "-c",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.derived/runner.swift",
+      "-I",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules",
+      "-target",
+      "x86_64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-emit-objc-header",
+      "-emit-objc-header-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/include/AttribrPackageTests-Swift.h",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "swift",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ],
+    "AttribrTests" : [
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc",
+      "-module-name",
+      "AttribrTests",
+      "-package-name",
+      "swift",
+      "-c",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/ConsentTests.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/DeviceIdentifierTests.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/EventQueueTests.swift",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/NetworkClientTests.swift",
+      "-I",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Modules",
+      "-target",
+      "x86_64-apple-macosx14.0",
+      "-incremental",
+      "-enable-batch-mode",
+      "-serialize-diagnostics",
+      "-index-store-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/index/store",
+      "-Onone",
+      "-enable-testing",
+      "-Xfrontend",
+      "-enable-cross-import-overlays",
+      "-j8",
+      "-DSWIFT_PACKAGE",
+      "-DDEBUG",
+      "-DSWIFT_MODULE_RESOURCE_BUNDLE_UNAVAILABLE",
+      "-module-cache-path",
+      "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/ModuleCache",
+      "-parseable-output",
+      "-parse-as-library",
+      "-swift-version",
+      "6",
+      "-plugin-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing",
+      "-sdk",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-F",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-I",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-L",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/usr/lib",
+      "-g",
+      "-Xcc",
+      "-isysroot",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX26.4.sdk",
+      "-Xcc",
+      "-F",
+      "-Xcc",
+      "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
+      "-Xcc",
+      "-fPIC",
+      "-Xcc",
+      "-g",
+      "-package-name",
+      "swift",
+      "-driver-use-frontend-path",
+      "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+    ]
+  },
+  "targetDependencyMap" : {
+    "Attribr" : [
+
+    ],
+    "AttribrPackageTests" : [
+      "AttribrTests",
+      "Attribr"
+    ],
+    "AttribrTests" : [
+      "Attribr"
+    ]
+  },
+  "testDiscoveryCommands" : {
+
+  },
+  "testEntryPointCommands" : {
+    "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.derived/runner.swift" : {
+      "inputs" : [
+
+      ],
+      "outputs" : [
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.derived/runner.swift"
+        }
+      ]
+    }
+  },
+  "traitConfiguration" : {
+    "default" : {
+
+    }
+  },
+  "writeCommands" : {
+    "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Attribr.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Configuration.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Consent.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/DeviceIdentifier.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/EventQueue.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/Logger.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Sources/Attribr/NetworkClient.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/sources"
+    },
+    "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.derived/runner.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/sources"
+    },
+    "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.product/Objects.LinkFileList" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<link-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Attribr.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Configuration.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Consent.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/DeviceIdentifier.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/EventQueue.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/Logger.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/Attribr.build/NetworkClient.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.build/runner.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/ConsentTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/DeviceIdentifierTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/EventQueueTests.swift.o"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/NetworkClientTests.swift.o"
+        }
+      ],
+      "outputFilePath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrPackageTests.product/Objects.LinkFileList"
+    },
+    "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/sources" : {
+      "alwaysOutOfDate" : false,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<sources-file-list>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/ConsentTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/DeviceIdentifierTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/EventQueueTests.swift"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/Tests/AttribrTests/NetworkClientTests.swift"
+        }
+      ],
+      "outputFilePath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/AttribrTests.build/sources"
+    },
+    "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt" : {
+      "alwaysOutOfDate" : true,
+      "inputs" : [
+        {
+          "kind" : "virtual",
+          "name" : "<swift-get-version>"
+        },
+        {
+          "kind" : "file",
+          "name" : "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc"
+        }
+      ],
+      "outputFilePath" : "/Users/AMarie/Developer/Marvel-Technologies/Attribr-by-MRVL/sdk/swift/.build/x86_64-apple-macosx/debug/swift-version--58304C5D6DBC2206.txt"
+    }
+  }
+}
