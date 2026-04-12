@@ -3,9 +3,9 @@ Pod::Spec.new do |s|
   s.version          = '1.0.0'
   s.summary          = 'Install attribution and 30-day retention SDK by MRVL Technologies.'
   s.homepage         = 'https://mrvltechnologies.com'
-  s.license          = { :type => 'Proprietary' }
+  s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'MRVL Technologies' => 'support@mrvltechnologies.com' }
-  s.source           = { :path => '.' }
+  s.source           = { :git => 'https://github.com/mrvltechnologies/attribr-swift.git', :tag => s.version.to_s }
   s.swift_versions   = ['5.5', '6.0']
   s.ios.deployment_target = '15.0'
 
