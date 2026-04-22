@@ -28,6 +28,8 @@ public final class Attribr {
     private let queue: EventQueue
     private let network: NetworkClient
     private let log: AttribrLogger
+    private let deepLinks: DeepLinkHandler
+    private let skan: SKANManager
 
     // MARK: - Init
 
@@ -39,6 +41,8 @@ public final class Attribr {
         self.deviceId = DeviceIdentifier()
         self.queue = EventQueue(maxSize: config.maxQueueSize, logger: log)
         self.network = NetworkClient(apiKey: apiKey, config: config, logger: log)
+        self.deepLinks = DeepLinkHandler(network: network, deviceId: deviceId, logger: log)
+        self.skan = SKANManager(network: network, logger: log)
         log.info("Attribr initialised — key prefix: \(String(apiKey.prefix(18)))")
     }
 
@@ -146,6 +150,42 @@ public final class Attribr {
             let success = await sdk.sendDelete()
             await MainActor.run { completion(success) }
         }
+    }
+
+    /// Handle an incoming deep link URL.
+    /// Call this from your SwiftUI `.onOpenURL` handler or UIKit URL handling methods.
+    ///
+    /// Returns a `DeepLinkResult` indicating whether the URL was an Attribr link
+    /// and what destination it resolved to.
+    @discardableResult
+    public static func handleDeepLink(_ url: URL) async -> DeepLinkResult {
+        guard let sdk = shared else { return .notAttribrLink }
+        guard sdk.consent.isGranted else {
+            sdk.log.debug("handleDeepLink skipped — consent not granted")
+            return .notAttribrLink
+        }
+        return await sdk.deepLinks.handle(url)
+    }
+
+    /// Register with Apple's SKAdNetwork for privacy-preserving attribution.
+    /// Call once after `initialize()` and `setConsent(.granted)`.
+    public static func registerSKAN() {
+        guard let sdk = shared else {
+            preconditionFailure("Call Attribr.initialize() before registerSKAN()")
+        }
+        sdk.skan.register(apiKey: sdk.apiKey)
+    }
+
+    /// Update the SKAdNetwork conversion value based on an event.
+    /// The SDK will look up the conversion value mapping from your dashboard config
+    /// and update Apple's SKAN framework accordingly.
+    ///
+    /// - Parameters:
+    ///   - eventName: The event name matching your SKAN config (e.g. "purchase", "signup").
+    ///   - value: Optional revenue value for revenue-based conversion values.
+    public static func updateConversionValue(eventName: String, value: Double? = nil) {
+        guard let sdk = shared else { return }
+        sdk.skan.updateForEvent(name: eventName, value: value)
     }
 
     // MARK: - Internal send methods

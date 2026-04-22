@@ -7,14 +7,14 @@ Install attribution for iOS apps. Zero dependencies. Zero rejection risk. 3 line
 In Xcode: **File > Add Package Dependencies** and enter:
 
 ```
-https://github.com/7rrsq5b55n-wq/attribr-swift
+https://github.com/mrvltechnologies/attribr-swift
 ```
 
 Or add to your `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/7rrsq5b55n-wq/attribr-swift", from: "1.0.0")
+    .package(url: "https://github.com/mrvltechnologies/attribr-swift", from: "1.0.0")
 ]
 ```
 
