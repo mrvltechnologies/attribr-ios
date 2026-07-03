@@ -3,10 +3,13 @@ import Foundation
 /// A pending outbound request, serialised when offline.
 struct QueuedEvent: Codable, Sendable {
     enum EventKind: String, Codable {
-        case track     // POST /attribr-track
-        case attribute // POST /attribr-attribute
-        case event     // POST /attribr-track (custom event payload)
-        case delete    // DELETE /attribr-delete-user-data
+        case track            // POST /attribr-track
+        case attribute        // POST /attribr-attribute
+        case event            // POST /attribr-track (custom event payload)
+        case delete           // DELETE /attribr-delete-user-data
+        case adRevenue        // POST /attribr-ad-revenue
+        case subscriptionEvent // POST /attribr-subscription-event
+        case revenue          // POST /attribr-revenue
     }
 
     let id: String           // UUID string for deduplication
