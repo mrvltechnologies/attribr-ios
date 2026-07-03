@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name             = 'Attribr'
-  s.version          = '1.0.0'
+  s.version          = '1.4.0'
   s.summary          = 'Install attribution and 30-day retention SDK by MRVL Technologies.'
   s.homepage         = 'https://mrvltechnologies.com'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }

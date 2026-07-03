@@ -326,12 +326,32 @@ public final class Attribr {
         let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "unknown"
 
+        // Device locale → ISO 3166-1 alpha-2 country code (e.g. "US", "GB").
+        // Sent explicitly so the server has a country even when the user has
+        // iCloud Private Relay enabled (which masks the IP from geolocation).
+        let localeCountry: String? = {
+            if #available(iOS 16, macOS 13, *) {
+                return Locale.current.region?.identifier
+            } else {
+                return Locale.current.regionCode
+            }
+        }()
+
         var body: [String: Any] = [
             "app_id": appId,
             "device_hash": deviceHash,
             "os_version": osVersion,
-            "app_version": appVersion
+            "app_version": appVersion,
+            "platform": "ios",
+            // Sprint 13 — app-local install-instance ID hash. Enables the
+            // backend's `reinstall_candidate` classification on the second
+            // installation of the app on the same device (UserDefaults is
+            // wiped on uninstall, so the hash changes across reinstalls).
+            "sdk_install_instance_id_hash": InstallInstance.hashHex(),
         ]
+        if let country = localeCountry {
+            body["country"] = country
+        }
 
         // Re-engagement detection: compare against last *successfully confirmed* seen timestamp.
         // IMPORTANT: install_type MUST always be present in the payload. The server-side
@@ -467,6 +487,10 @@ public final class Attribr {
         let result = await network.delete(path: "attribr-delete-user-data", body: data)
         switch result {
         case .success:
+            // Sprint 13 — also clear the app-local install-instance so a subsequent
+            // trackLaunch() re-generates a fresh hash and classifies as
+            // reinstall_candidate on the server side.
+            InstallInstance.reset()
             log.info("deleteAllData: confirmed by server")
             return true
         case .failure(let err):

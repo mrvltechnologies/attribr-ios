@@ -1,0 +1,14 @@
+# Swift Package Manager build artifacts
+.build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+
+# macOS
+.DS_Store
+
+# Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
