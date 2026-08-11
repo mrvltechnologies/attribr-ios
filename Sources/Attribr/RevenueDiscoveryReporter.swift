@@ -27,11 +27,17 @@ import Foundation
 /// and the SDK moves on.
 ///
 /// Sent fields are limited to what Attribr's intake route accepts — no
-/// price, currency, revenue amount, raw device identifier, or raw
-/// appAccountToken leaves this function (appAccountToken and the SDK
-/// install-instance ID are sent already-hashed, matching
+/// price, currency, revenue amount, or raw device identifier leaves this
+/// function (the SDK install-instance ID is sent already-hashed, matching
 /// `InstallInstance.hashHex()`'s "raw UUID never leaves the device"
-/// contract). Revenue amount is deliberately never part of this
+/// contract). `appAccountToken`, when supplied, is the one deliberate
+/// exception: it is sent as the plain UUID string, not hashed — Attribr
+/// has to be able to match it against the same plain value Apple echoes
+/// back on the S2S notification for this transaction (stored as a `uuid`
+/// column server-side), which a one-way hash would make impossible. This
+/// is not raw PII: it's already the opaque token design
+/// (`AppAccountTokenProvider`) chose specifically to be safe to share with
+/// both Apple and Attribr. Revenue amount is deliberately never part of this
 /// payload — that is the whole point of this being the safe successor
 /// to `trackRevenue()`. Actual revenue is later established server-side
 /// by verifying the transaction against Apple's own StoreKit Server API,
