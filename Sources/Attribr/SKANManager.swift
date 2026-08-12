@@ -39,6 +39,12 @@ public final class SKANManager {
     func register(apiKey: String) {
 #if os(iOS)
         guard !isRegistered else { return }
+        // Set optimistically so a second register() call while the async work
+        // below is still in flight doesn't double-register — but RESET on
+        // fetchMappings failure (see the Task below). Previously the flag
+        // stayed true forever, so a failed config fetch left
+        // `conversionMappings` empty and no later register() could ever
+        // retry, silently disabling all conversion-value updates.
         isRegistered = true
         if #available(iOS 16.1, *) {
             SKAdNetwork.updatePostbackConversionValue(0) { error in
@@ -51,7 +57,16 @@ public final class SKANManager {
             SKAdNetwork.registerAppForAdNetworkAttribution()
             logger.info("SKAN 2.x/3.x registered")
         }
-        Task { await fetchMappings(apiKey: apiKey) }
+        Task {
+            let fetched = await fetchMappings(apiKey: apiKey)
+            if !fetched {
+                // Allow a later register() call to retry the whole flow.
+                // Re-invoking the SKAdNetwork registration calls above is
+                // harmless (they are idempotent), and this is the only way
+                // the mappings can ever be re-fetched after a failure.
+                isRegistered = false
+            }
+        }
 #endif
     }
 
@@ -81,19 +96,28 @@ public final class SKANManager {
         } else if #available(iOS 16.0, *) {
             SKAdNetwork.updateConversionValue(newValue)
             logger.info("SKAN 2.x updated: CV=\(newValue)")
+        } else {
+            // iOS 14.0–15.x: SKAN 2/3 API
+            SKAdNetwork.updateConversionValue(newValue)
+            logger.info("SKAN 2.x updated (iOS 14–15): CV=\(newValue)")
         }
 #endif
     }
 
 #if os(iOS)
-    private func fetchMappings(apiKey: String) async {
+    /// Returns `true` when the conversion-value mappings were fetched and
+    /// decoded successfully. `register()` uses `false` to roll back the
+    /// `isRegistered` flag so the fetch can be retried later.
+    private func fetchMappings(apiKey: String) async -> Bool {
         let body: [String: String] = ["app_id": Bundle.main.bundleIdentifier ?? "unknown"]
-        guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else { return false }
         let result = await network.post(path: "attribr-skan-config", body: data)
         if case .success(let responseData, _) = result,
            let response = try? JSONDecoder().decode(MappingResponse.self, from: responseData) {
             self.conversionMappings = response.mappings
+            return true
         }
+        return false
     }
 
     private struct MappingResponse: Codable {

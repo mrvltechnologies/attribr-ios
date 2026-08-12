@@ -109,6 +109,42 @@ final class NetworkClientTests: XCTestCase {
         }
     }
 
+    func testRelativePathResolvesAgainstBaseURL() async {
+        var capturedURL: URL?
+        StubURLProtocol.requestHandler = { request in
+            capturedURL = request.url
+            let resp = HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!
+            return (resp, Data())
+        }
+        let client = makeClient()
+        _ = await client.post(path: "attribr-track", body: Data())
+        XCTAssertEqual(capturedURL?.absoluteString, "https://stub.test/v1/attribr-track")
+    }
+
+    func testAbsoluteEndpointBypassesBaseURL() async {
+        // Queued .revenueDiscovery events carry an absolute URL (the intake
+        // lives on the dashboard host, not the Edge Functions baseURL) — the
+        // client must use it verbatim and still attach the X-Attribr-Key header.
+        var capturedRequest: URLRequest?
+        StubURLProtocol.requestHandler = { request in
+            capturedRequest = request
+            let resp = HTTPURLResponse(url: request.url!, statusCode: 204, httpVersion: nil, headerFields: nil)!
+            return (resp, Data())
+        }
+        let client = makeClient()
+        _ = await client.post(path: AttribrEndpoints.revenueDiscovery, body: Data())
+        XCTAssertEqual(
+            capturedRequest?.url?.absoluteString,
+            "https://attribr.dev/api/v1/revenue-discovery",
+            "absolute http(s) endpoints must not be re-rooted onto baseURL"
+        )
+        XCTAssertEqual(
+            capturedRequest?.value(forHTTPHeaderField: "X-Attribr-Key"),
+            "attr_test_TESTKEY000000000000000000000000000000000",
+            "X-Attribr-Key header behaviour must be identical for absolute endpoints"
+        )
+    }
+
     func testDeleteMethod() async {
         var capturedMethod: String?
         StubURLProtocol.requestHandler = { request in

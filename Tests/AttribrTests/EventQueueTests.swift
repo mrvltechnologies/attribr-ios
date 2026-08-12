@@ -100,6 +100,19 @@ final class EventQueueTests: XCTestCase {
         XCTAssertEqual(q.count, 4)
     }
 
+    func testRevenueDiscoveryKindPersistsAndDecodes() {
+        // .revenueDiscovery events must round-trip through the UserDefaults
+        // persistence layer so a payload queued while consent was pending (or
+        // after a failed send) survives an app restart.
+        let q1 = makeQueue()
+        let event = makeEvent(kind: .revenueDiscovery)
+        q1.enqueue(event)
+
+        let q2 = makeQueue()
+        XCTAssertEqual(q2.peek().first?.id, event.id)
+        XCTAssertEqual(q2.peek().first?.kind, .revenueDiscovery)
+    }
+
     func testRemoveUnknownIdIsNoOp() {
         let q = makeQueue()
         q.enqueue(makeEvent())

@@ -10,6 +10,13 @@ struct QueuedEvent: Codable, Sendable {
         case adRevenue        // POST /attribr-ad-revenue
         case subscriptionEvent // POST /attribr-subscription-event
         case revenue          // POST /attribr-revenue
+        // POST to an ABSOLUTE URL (`AttribrEndpoints.revenueDiscovery`) —
+        // the revenue-discovery intake lives on the Attribr dashboard host,
+        // not on the Supabase Edge Functions `config.baseURL` like every
+        // other kind. The flush path detects the absolute endpoint and
+        // bypasses baseURL. Retries are safe: the payload carries a
+        // deterministic `sdk_event_id`, so the server dedupes resends.
+        case revenueDiscovery
     }
 
     let id: String           // UUID string for deduplication
@@ -22,9 +29,13 @@ struct QueuedEvent: Codable, Sendable {
 /// Thread-safe offline-resilient queue backed by `UserDefaults`.
 ///
 /// - Max 500 events. When full, the **oldest** event is evicted.
+/// - Events that have failed `maxAttempts` times are evicted to prevent zombie
+///   events from blocking fresh ones indefinitely.
 /// - Events are flushed in FIFO order whenever the network is available.
 /// - Persists across app restarts.
 final class EventQueue: @unchecked Sendable {
+    static let maxAttempts = 10
+
     private let defaultsKey = "com.mrvltechnologies.attribr.queue"
     private let lock = NSLock()
     private let maxSize: Int
@@ -77,6 +88,15 @@ final class EventQueue: @unchecked Sendable {
 
     var count: Int {
         lock.withLock { events.count }
+    }
+
+    /// Remove all queued events and clear persisted storage.
+    /// Call from `deleteAllData` to ensure no stale events are retried post-deletion.
+    func clear() {
+        lock.withLock {
+            events.removeAll()
+            UserDefaults.standard.removeObject(forKey: defaultsKey)
+        }
     }
 
     // MARK: - Persistence

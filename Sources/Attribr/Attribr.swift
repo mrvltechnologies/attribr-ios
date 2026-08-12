@@ -37,6 +37,15 @@ public final class Attribr {
     private let deepLinks: DeepLinkHandler
     private let skan: SKANManager
 
+    /// In-flight guard for `flushQueue()`. The documented integration calls
+    /// `setConsent(.granted)` immediately followed by `trackLaunch()` — both
+    /// spawn a flush Task, and without this guard the two flushes interleave
+    /// across await suspension points and every queued event is sent twice
+    /// (each flush `peek()`s the same events before either `remove()`s them).
+    /// The class is `@MainActor`, so reading/writing this flag is race-free;
+    /// an overlapping flush simply returns and lets the first one finish.
+    private var isFlushing = false
+
     // MARK: - Init
 
     private init(apiKey: String, config: AttribrConfiguration) {
@@ -49,7 +58,10 @@ public final class Attribr {
         self.network = NetworkClient(apiKey: apiKey, config: config, logger: log)
         self.deepLinks = DeepLinkHandler(network: network, deviceId: deviceId, logger: log)
         self.skan = SKANManager(network: network, logger: log)
-        log.info("Attribr initialised — key prefix: \(String(apiKey.prefix(18)))")
+        // Log only the first 10 chars — that is the non-secret "attr_live_" /
+        // "attr_test_" scheme prefix. Anything longer would leak part of the
+        // key material into Console.app / sysdiagnose logs.
+        log.info("Attribr initialised — key prefix: \(String(apiKey.prefix(10)))")
     }
 
     // MARK: - Public API
@@ -186,6 +198,10 @@ public final class Attribr {
         guard let sdk = shared else {
             preconditionFailure("Call Attribr.initialize() before registerSKAN()")
         }
+        guard sdk.consent.isGranted else {
+            sdk.log.debug("registerSKAN skipped — consent not granted")
+            return
+        }
         sdk.skan.register(apiKey: sdk.apiKey)
     }
 
@@ -198,6 +214,10 @@ public final class Attribr {
     ///   - value: Optional revenue value for revenue-based conversion values.
     public static func updateConversionValue(eventName: String, value: Double? = nil) {
         guard let sdk = shared else { return }
+        guard sdk.consent.isGranted else {
+            sdk.log.debug("updateConversionValue skipped — consent not granted")
+            return
+        }
         sdk.skan.updateForEvent(name: eventName, value: value)
     }
 
@@ -295,17 +315,22 @@ public final class Attribr {
     ///   - revenue: Revenue in currency (nil for non-revenue events)
     ///   - currency: ISO 4217 code, default "USD"
     ///   - originalTransactionId: StoreKit original transaction ID for deduplication
+    ///   - store: Store identifier — "apple" (default), "google", "stripe", or "other"
     public static func trackSubscriptionEvent(
         productId: String,
         eventType: String,
         revenue: Double? = nil,
         currency: String = "USD",
-        originalTransactionId: String? = nil
+        originalTransactionId: String? = nil,
+        store: String = "apple"
     ) {
         guard let sdk = shared else { return }
         guard sdk.consent.isGranted else {
             sdk.log.debug("trackSubscriptionEvent skipped — consent not granted")
             return
+        }
+        if originalTransactionId == nil {
+            sdk.log.debug("trackSubscriptionEvent called without originalTransactionId — duplicate events will not be deduplicated")
         }
         Task {
             await sdk.sendSubscriptionEvent(
@@ -313,9 +338,47 @@ public final class Attribr {
                 eventType: eventType,
                 revenue: revenue,
                 currency: currency,
-                originalTransactionId: originalTransactionId
+                originalTransactionId: originalTransactionId,
+                store: store
             )
         }
+    }
+
+    // MARK: - Internal SDK bridge (RevenueDiscoveryReporter)
+
+    /// Consent state exposed to SDK-internal reporters that live outside this
+    /// class (e.g. `RevenueDiscoveryReporter`, which historically only checked
+    /// `_apiKey != nil` and therefore bypassed the consent gate entirely).
+    /// `nil` means the SDK has not been initialised yet.
+    internal static var consentState: ConsentState? {
+        shared?.consent.state
+    }
+
+    /// Convenience — `true` only when the SDK is initialised AND the user has
+    /// granted consent. Any pre-init or unknown/revoked state reads as `false`.
+    internal static var isConsentGranted: Bool {
+        shared?.consent.isGranted ?? false
+    }
+
+    /// Enqueue a revenue-discovery payload on the SDK's durable offline queue.
+    /// Used by `RevenueDiscoveryReporter` both when consent is still `.unknown`
+    /// (the payload is held on-device and flushed after `setConsent(.granted)`)
+    /// and when a live send fails (retried by the normal flush path).
+    /// No-op before `initialize()` — there is no queue to write to.
+    ///
+    /// - Parameter attempts: `0` when nothing has been tried yet (consent
+    ///   pending), `1` when a live send already failed — mirrors how the
+    ///   other send methods enqueue after their first failed attempt.
+    internal static func enqueueRevenueDiscovery(_ payload: Data, attempts: Int = 1) {
+        guard let sdk = shared else { return }
+        let event = QueuedEvent(
+            id: UUID().uuidString,
+            kind: .revenueDiscovery,
+            payload: payload,
+            enqueuedAt: Date(),
+            attempts: attempts
+        )
+        sdk.queue.enqueue(event)
     }
 
     // MARK: - Internal send methods
@@ -487,11 +550,13 @@ public final class Attribr {
         let result = await network.delete(path: "attribr-delete-user-data", body: data)
         switch result {
         case .success:
-            // Sprint 13 — also clear the app-local install-instance so a subsequent
-            // trackLaunch() re-generates a fresh hash and classifies as
-            // reinstall_candidate on the server side.
-            InstallInstance.reset()
-            log.info("deleteAllData: confirmed by server")
+            // Clear every local persistence layer so this device cannot be
+            // matched to the deleted server record on next launch.
+            InstallInstance.reset()                                              // backup-excluded install UUID file (+ legacy UserDefaults copy)
+            deviceId.clearPersistedHash()                                        // iCloud KV + in-memory device hash
+            UserDefaults.standard.removeObject(forKey: "attribr.lastSeenAt")    // retention clock
+            queue.clear()                                                         // pending queued events
+            log.info("deleteAllData: server confirmed — all local state cleared")
             return true
         case .failure(let err):
             log.error("deleteAllData failed: \(err)")
@@ -567,7 +632,8 @@ public final class Attribr {
         eventType: String,
         revenue: Double?,
         currency: String,
-        originalTransactionId: String?
+        originalTransactionId: String?,
+        store: String
     ) async {
         let deviceHash = deviceId.hash()
         let appId = Bundle.main.bundleIdentifier ?? "unknown"
@@ -578,7 +644,7 @@ public final class Attribr {
             "product_id": productId,
             "event_type": eventType,
             "currency": currency,
-            "store": "apple"
+            "store": store
         ]
         if let revenue { body["revenue_usd"] = revenue }
         if let originalTransactionId { body["original_transaction_id"] = originalTransactionId }
@@ -646,11 +712,27 @@ public final class Attribr {
     // MARK: - Queue flush
 
     private func flushQueue() async {
+        // Coalesce overlapping flushes — see `isFlushing` doc comment. A skipped
+        // caller loses nothing: the in-flight flush is already draining the
+        // same FIFO snapshot, and anything it fails on stays queued for next time.
+        guard !isFlushing else {
+            log.debug("flushQueue skipped — a flush is already in flight")
+            return
+        }
+        isFlushing = true
+        defer { isFlushing = false }
+
         let pending = queue.peek()
         guard !pending.isEmpty else { return }
         log.info("Flushing \(pending.count) queued events")
 
         for event in pending {
+            if event.attempts >= EventQueue.maxAttempts {
+                queue.remove(id: event.id)
+                log.error("Evicting undeliverable event after \(EventQueue.maxAttempts) attempts: \(event.kind.rawValue)")
+                continue
+            }
+
             let path: String
             let method: String
             switch event.kind {
@@ -660,6 +742,9 @@ public final class Attribr {
             case .adRevenue:       path = "attribr-ad-revenue"; method = "POST"
             case .subscriptionEvent: path = "attribr-subscription-event"; method = "POST"
             case .revenue:         path = "attribr-revenue"; method = "POST"
+            // Absolute URL — lives on the dashboard host, not config.baseURL.
+            // NetworkClient detects the http(s) prefix and uses it directly.
+            case .revenueDiscovery: path = AttribrEndpoints.revenueDiscovery; method = "POST"
             }
 
             let result: NetworkResult

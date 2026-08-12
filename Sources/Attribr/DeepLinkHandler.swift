@@ -82,6 +82,10 @@ public final class DeepLinkHandler {
 
     // MARK: - Private
 
+    /// Domains that are permitted to carry the `?attribr_link=` query parameter.
+    /// Universal links (patterns 1 and 2) are already domain-scoped by the OS.
+    private static let allowedLinkDomains: Set<String> = ["attribr.dev", "app.attribr.dev", "attribr.link"]
+
     private func extractLinkCode(from url: URL) -> String? {
         // Pattern 1: https://attribr.dev/l/{code}
         if let host = url.host,
@@ -97,8 +101,10 @@ public final class DeepLinkHandler {
         }
 
         // Pattern 3: Any URL with ?attribr_link={code} query parameter
+        // Only accepted from known Attribr domains to prevent link-hijacking.
         if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
            let linkParam = components.queryItems?.first(where: { $0.name == "attribr_link" })?.value {
+            guard let host = url.host, DeepLinkHandler.allowedLinkDomains.contains(host) else { return nil }
             return linkParam
         }
 

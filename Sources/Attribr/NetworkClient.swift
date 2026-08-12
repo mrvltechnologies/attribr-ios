@@ -54,7 +54,19 @@ final class NetworkClient: @unchecked Sendable {
     // MARK: - Private
 
     private func send(method: String, path: String, body: Data) async -> NetworkResult {
-        let url = baseURL.appendingPathComponent(path)
+        // Endpoints are normally relative paths resolved against the Supabase
+        // Edge Functions `baseURL`. The revenue-discovery intake, however,
+        // lives on the Attribr dashboard host as an absolute URL — detect
+        // absolute http(s) endpoints and use them as-is so queued
+        // `.revenueDiscovery` events flush to the right host. The same
+        // `X-Attribr-Key` header applies either way.
+        let url: URL
+        if path.hasPrefix("https://") || path.hasPrefix("http://"),
+           let absolute = URL(string: path) {
+            url = absolute
+        } else {
+            url = baseURL.appendingPathComponent(path)
+        }
         var attempt = 0
 
         while attempt < maxRetries {

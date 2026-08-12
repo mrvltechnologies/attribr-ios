@@ -43,6 +43,16 @@ import Foundation
 /// by verifying the transaction against Apple's own StoreKit Server API,
 /// never trusted from any client submission.
 ///
+/// SDK-internal endpoint registry. Lives outside the availability-gated
+/// reporter enum below so `Attribr.flushQueue()` (which supports the SDK's
+/// full iOS 15 / macOS 12 floor) can reference the absolute URL when
+/// replaying queued `.revenueDiscovery` events without an availability check.
+internal enum AttribrEndpoints {
+    /// Attribr dashboard host — distinct from the SDK's default Supabase
+    /// Edge Functions base URL. This is where /api/v1/revenue-discovery lives.
+    static let revenueDiscovery = "https://attribr.dev/api/v1/revenue-discovery"
+}
+
 /// Requires iOS 16 / macOS 13 — the platform floor StoreKit 2's
 /// `Transaction.environment` needs. The SDK package itself targets a
 /// lower floor (iOS 15 / macOS 12) for its other APIs, so this type is
@@ -54,7 +64,7 @@ public enum RevenueDiscoveryReporter {
     /// Attribr dashboard host — distinct from the SDK's default Supabase
     /// Edge Functions base URL. This talks directly to the dashboard's
     /// REST route, which is where /api/v1/revenue-discovery lives.
-    private static let endpoint = URL(string: "https://attribr.dev/api/v1/revenue-discovery")!
+    private static let endpoint = URL(string: AttribrEndpoints.revenueDiscovery)!
 
     // Matches the SDK's established pattern for a static, effectively-
     // immutable-after-first-use formatter (see Attribr._apiKey) — ISO8601DateFormatter
@@ -107,6 +117,32 @@ public enum RevenueDiscoveryReporter {
 
         guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
 
+        // Consent gate — checking `_apiKey` alone (as this reporter originally
+        // did) bypassed the SDK's GDPR gate: every other network path in
+        // `Attribr` refuses to send until `setConsent(.granted)`.
+        //   • `.unknown`  → the user simply hasn't been asked yet. Don't drop
+        //     the witness signal: park the payload on the SDK's durable queue,
+        //     which `Attribr.setConsent(.granted)` flushes. The data stays
+        //     on-device until consent exists.
+        //   • `.revoked` (or SDK not initialised) → the user explicitly opted
+        //     out; retaining the payload for a hypothetical future opt-in
+        //     would contradict "SDK stops all collection". Drop it.
+        switch await Attribr.consentState {
+        case .granted:
+            break
+        case .unknown:
+            await Attribr.enqueueRevenueDiscovery(body, attempts: 0)
+            #if DEBUG
+            print("[RevenueDiscoveryReporter] tx=\(transaction.id) queued — consent not yet granted")
+            #endif
+            return
+        case .revoked, nil:
+            #if DEBUG
+            print("[RevenueDiscoveryReporter] tx=\(transaction.id) dropped — consent revoked or SDK not initialised")
+            #endif
+            return
+        }
+
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -118,10 +154,16 @@ public enum RevenueDiscoveryReporter {
         print("[RevenueDiscoveryReporter] attempt tx=\(transaction.id) product=\(transaction.productID) env=\(environment)")
         #endif
 
-        // Small bounded retry on network failure only — never retries on a
-        // clean HTTP error response (4xx/5xx), since sdk_event_id already
-        // makes a resend safe but there is no reason to hammer a server
-        // that just answered.
+        // Small bounded retry on network failure only — never retries
+        // in-line on a clean HTTP error response (4xx/5xx), since there is
+        // no reason to hammer a server that just answered. Failures are no
+        // longer terminal, though: transient outcomes (transport failure,
+        // 429, 5xx) are parked on the SDK's durable EventQueue and replayed
+        // by the normal flush path on the next launch/consent grant.
+        // `sdk_event_id` is deterministic per transaction, so any resend is
+        // deduplicated server-side. Only a non-429 4xx stays terminal — the
+        // server definitively rejected this exact payload, and replaying an
+        // identical body can never succeed.
         for attempt in 0..<2 {
             do {
                 let (data, response) = try await URLSession.shared.data(for: request)
@@ -135,6 +177,10 @@ public enum RevenueDiscoveryReporter {
                     }
                     print("[RevenueDiscoveryReporter] tx=\(transaction.id) http=\(http.statusCode) tracking_status=\(trackingStatus) dedupe=\(dedupe)")
                     #endif
+                    if http.statusCode == 429 || http.statusCode >= 500 {
+                        // Server overloaded or erroring — durable retry later.
+                        await Attribr.enqueueRevenueDiscovery(body)
+                    }
                 }
                 return
             } catch {
@@ -143,8 +189,11 @@ public enum RevenueDiscoveryReporter {
                     continue
                 }
                 #if DEBUG
-                print("[RevenueDiscoveryReporter] tx=\(transaction.id) failed after retry, dropping (non-fatal): \(error.localizedDescription)")
+                print("[RevenueDiscoveryReporter] tx=\(transaction.id) failed after retry, queueing for durable retry (non-fatal): \(error.localizedDescription)")
                 #endif
+                // Both transport attempts failed (offline, DNS, timeout…) —
+                // hand the payload to the EventQueue instead of dropping it.
+                await Attribr.enqueueRevenueDiscovery(body)
             }
         }
     }
