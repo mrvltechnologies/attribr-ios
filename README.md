@@ -4,23 +4,23 @@ Install attribution for iOS apps. Zero dependencies. Zero rejection risk. 3 line
 
 ## Installation (Swift Package Manager)
 
-**Recommended (from v1.0.0):** In Xcode, **File > Add Package Dependencies**, enter:
+**Recommended (from v1.4.0):** In Xcode, **File > Add Package Dependencies**, enter:
 
 ```
 https://github.com/mrvltechnologies/attribr-ios
 ```
 
-and select **Up to Next Major Version** starting at `1.0.0`. Or in `Package.swift`:
+and select **Up to Next Major Version** starting at `1.4.0`. Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mrvltechnologies/attribr-ios", from: "1.0.0")
+    .package(url: "https://github.com/mrvltechnologies/attribr-ios", from: "1.4.0")
 ]
 ```
 
-**Temporary fallback (pre-tag only):** until the `1.0.0` tag is published, pin to an exact commit
-instead of a version — this is **not** a recommended production pattern, since it does not track
-security or bug-fix updates automatically:
+**Temporary fallback (pre-tag only):** if you need to integrate before a tag is available, pin to
+an exact commit instead of a version — this is **not** a recommended production pattern, since it
+does not track security or bug-fix updates automatically:
 
 ```swift
 dependencies: [
@@ -113,4 +113,4 @@ Full integration guide: [attribr.dev/docs](https://attribr.dev/docs)
 
 ## License
 
-MIT License. Copyright 2026 Marvel Technologies.
+MIT License. Copyright 2026 MRVL Technologies.
