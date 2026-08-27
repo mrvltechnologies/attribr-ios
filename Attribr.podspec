@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.homepage         = 'https://mrvltechnologies.com'
   s.license          = { :type => 'MIT', :file => 'LICENSE' }
   s.author           = { 'MRVL Technologies' => 'support@mrvltechnologies.com' }
-  s.source           = { :git => 'https://github.com/mrvltechnologies/attribr-ios.git', :tag => s.version.to_s }
+  s.source           = { :git => 'https://github.com/mrvltechnologies/attribr-ios.git', :tag => "v#{s.version}" }
   s.swift_versions   = ['5.5', '6.0']
   s.ios.deployment_target = '15.0'
 
