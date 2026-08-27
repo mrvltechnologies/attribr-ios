@@ -1,18 +1,15 @@
 // swift-tools-version:6.0
 // Attribr by MRVL — Swift Package
 //
-// 🚨 STUB FILE — full Package.swift will be written in Phase 4 of BUILD_PROMPT.md
+// Requires Swift 6.0 tooling (Xcode 16+) — the source uses Swift 6 language
+// mode features (`nonisolated(unsafe)`, strict concurrency checking).
 //
-// Constraints (from ARCHITECTURE.md):
+// Constraints:
 //   - ZERO third-party dependencies
-//   - iOS 18+ minimum deployment target
+//   - iOS 15+ minimum deployment target (some APIs, e.g. RevenueDiscoveryReporter,
+//     are gated to iOS 16+/macOS 13+ via @available and degrade gracefully below that)
 //   - Single product: "Attribr" library
-//   - Only imports: Foundation, CryptoKit, AppTrackingTransparency, os.log
-//
-// See:
-//   - ../ARCHITECTURE.md
-//   - ../CONTRACTS.md (SDK public API section)
-//   - ../BUILD_PROMPT.md (Task 4)
+//   - System frameworks only: Foundation, CryptoKit, StoreKit, Security, UIKit, os.log
 
 import PackageDescription
 

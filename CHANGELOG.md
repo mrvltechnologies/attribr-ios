@@ -1,5 +1,20 @@
 # Attribr Swift SDK — Changelog
 
+## Unreleased — Release hardening for first public GitHub tag
+
+- Removed stale "STUB FILE" placeholder header from `Package.swift`; reconciled its
+  platform-target and import-list comments with the actual source (they previously
+  claimed iOS 18+ and named frameworks the SDK doesn't use).
+- Corrected `README.md`'s `updateConversionValue` example to the SDK's real signature
+  (`updateConversionValue(eventName: String, value: Double? = nil)`) and its Swift-tooling
+  requirement (Swift 6.0+ / Xcode 16+, not 5.9+).
+- Added README sections: privacy/data-flow explanation, API-key handling guidance, SKAN/push-
+  token/GDPR-erasure usage examples, and a temporary commit-pin install fallback (explicitly
+  marked non-production) for use ahead of the first tag being published.
+- Fixed `Attribr.podspec`'s `s.source` — it pointed at an unrelated GitHub repository instead of
+  this SDK's actual remote.
+- No public API changes. No runtime/behavioural changes.
+
 ## 1.4.0 — 2026-07-03 (Sprint 13)
 
 - **App-local install-instance ID.** The SDK now generates a random UUID on first launch, persists it in the app's own `UserDefaults.standard` (key `attribr.installInstanceId`), and sends its SHA-256 hex digest to Attribr on every `trackLaunch()` in the new field `sdk_install_instance_id_hash`.
