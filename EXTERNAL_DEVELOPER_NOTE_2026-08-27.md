@@ -23,5 +23,11 @@ Hi — following up on the release-readiness review, here's where things stand:
   visible in a chat, screenshot, or log on your end, we need the key's prefix (the first ~14
   non-secret characters, e.g. `attr_live_ab12cd34`) or the account it belongs to in order to revoke
   and reissue it. Send that over and we'll rotate it the same day.
+- **Where Attribr is actually running today:** it's used across every app in MRVL Technologies'
+  own portfolio, and those apps have passed Apple App Review with the SDK included — that's not
+  the same as Apple having reviewed or certified Attribr itself, and we're not claiming that.
+  `v1.4.0` is the SDK's *first public GitHub release*, so outside of MRVL's own apps, public/
+  third-party adoption is genuinely early — you'd be among the first external integrators, not
+  joining an established base of outside users.
 
 Thanks again for the thorough review — it caught real gaps.
