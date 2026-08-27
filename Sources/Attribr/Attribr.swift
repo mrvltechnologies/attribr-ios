@@ -10,14 +10,44 @@ import Foundation
 /// Attribr.trackLaunch()
 /// ```
 ///
-/// ## Thread Safety
-/// All public methods are safe to call from any thread.
-/// Internally they dispatch to a single serial actor.
+/// ## Concurrency — main-actor isolated
+/// The entire public API is `@MainActor`. Call it from the main actor: directly from
+/// SwiftUI view bodies/lifecycle methods, `AppDelegate` callbacks, or any other
+/// main-actor context — all of these already run on the main actor, so no extra work
+/// is needed there. Calling from an `async` context that isn't already on the main
+/// actor works too; Swift inserts an implicit hop.
+///
+/// The one case that needs an explicit annotation: if you wrap these calls in your
+/// own type and that type is not already `@MainActor`, mark it `@MainActor` (or mark
+/// the wrapping function `@MainActor`) — otherwise Swift 6 rejects the synchronous
+/// call at compile time. For example:
+/// ```swift
+/// @MainActor
+/// enum MyAttribrWrapper {
+///     static func start(apiKey: String) {
+///         Attribr.initialize(apiKey: apiKey)
+///         Attribr.setConsent(.granted)
+///         Attribr.trackLaunch()
+///     }
+/// }
+/// ```
+/// Calling `Attribr.initialize`/`setConsent`/`trackLaunch`/etc. before `initialize()`
+/// has been called is a safe no-op (logged as an error), not a crash.
 @MainActor
 public final class Attribr {
     // MARK: - Shared instance
 
     private static var shared: Attribr?
+
+    /// Test-only reset of the singleton. Internal (not public) — exists solely so
+    /// `@testable import Attribr` test targets can exercise both the pre-init and
+    /// post-init code paths without one test's `initialize()` call permanently
+    /// poisoning the singleton for every other test in the same process. No shipping
+    /// app can call this; it is not part of the public API surface.
+    internal static func resetForTesting() {
+        shared = nil
+        _apiKey = nil
+    }
 
     /// Nonisolated key store — set once during `initialize()`, read by
     /// `AttribrMonetisation` from async contexts without hopping to MainActor.
@@ -79,9 +109,13 @@ public final class Attribr {
 
     /// Inform the SDK of the user's GDPR consent decision.
     /// The SDK will not send any data until this is set to `.granted`.
+    ///
+    /// Calling this before `initialize()` is a no-op (logged as an error) rather than a crash —
+    /// call-order mistakes in integrating apps should not be able to take down the host app.
     public static func setConsent(_ state: ConsentState) {
         guard let sdk = shared else {
-            preconditionFailure("Call Attribr.initialize() before setConsent()")
+            AttribrLogger(enabled: false).error("Attribr.setConsent() called before Attribr.initialize() — ignored")
+            return
         }
         sdk.consent.set(state)
         sdk.log.info("Consent set to: \(state.rawValue)")
@@ -194,9 +228,13 @@ public final class Attribr {
 
     /// Register with Apple's SKAdNetwork for privacy-preserving attribution.
     /// Call once after `initialize()` and `setConsent(.granted)`.
+    ///
+    /// Calling this before `initialize()` is a no-op (logged as an error) rather than a crash —
+    /// call-order mistakes in integrating apps should not be able to take down the host app.
     public static func registerSKAN() {
         guard let sdk = shared else {
-            preconditionFailure("Call Attribr.initialize() before registerSKAN()")
+            AttribrLogger(enabled: false).error("Attribr.registerSKAN() called before Attribr.initialize() — ignored")
+            return
         }
         guard sdk.consent.isGranted else {
             sdk.log.debug("registerSKAN skipped — consent not granted")

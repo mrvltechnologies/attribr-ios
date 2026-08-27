@@ -4,17 +4,17 @@ Install attribution for iOS apps. Zero dependencies. Zero rejection risk. 3 line
 
 ## Installation (Swift Package Manager)
 
-**Recommended (from v1.4.0):** In Xcode, **File > Add Package Dependencies**, enter:
+**Recommended (from v1.4.1):** In Xcode, **File > Add Package Dependencies**, enter:
 
 ```
 https://github.com/mrvltechnologies/attribr-ios
 ```
 
-and select **Up to Next Major Version** starting at `1.4.0`. Or in `Package.swift`:
+and select **Up to Next Major Version** starting at `1.4.1`. Or in `Package.swift`:
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mrvltechnologies/attribr-ios", from: "1.4.0")
+    .package(url: "https://github.com/mrvltechnologies/attribr-ios", from: "1.4.1")
 ]
 ```
 
@@ -43,6 +43,29 @@ Attribr.trackLaunch()
 
 No AASA file. No URL scheme. No IDFA. Ships with `PrivacyInfo.xcprivacy` included. The SDK sends
 **no network requests at all** until `setConsent(.granted)` is called.
+
+## Concurrency
+
+Attribr's entire public API is **`@MainActor`-isolated**. Calling it directly from SwiftUI view
+bodies/lifecycle methods, `AppDelegate` callbacks, or any other main-actor context works with no
+extra annotation — those already run on the main actor. Calling from an `async` context that isn't
+already on the main actor also works — Swift inserts an implicit hop.
+
+**If you wrap Attribr calls in your own type**, mark that type (or the wrapping function)
+`@MainActor` — otherwise Swift 6 rejects the call at compile time:
+
+```swift
+@MainActor
+enum MyAttribrWrapper {
+    static func start(apiKey: String) {
+        Attribr.initialize(apiKey: apiKey)
+        Attribr.setConsent(.granted)
+        Attribr.trackLaunch()
+    }
+}
+```
+
+Calling any Attribr method before `initialize()` is a safe no-op (logged as an error), not a crash.
 
 ### Tracking events and revenue
 

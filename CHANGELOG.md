@@ -1,5 +1,32 @@
 # Attribr Swift SDK — Changelog
 
+## 1.4.1 — 2026-08-27 — Consumer compile hardening
+
+Prompted by an external developer's report: their own `nonisolated` Swift wrapper around Attribr
+failed to compile under Swift 6 (the SDK is `@MainActor`-isolated), and they separately noted that
+`setConsent()` before `initialize()` triggers a hard crash via `preconditionFailure`.
+
+- **`setConsent()` and `registerSKAN()` no longer crash if called before `initialize()`.** Both
+  previously called `preconditionFailure`, which aborts the host app. Both are now a safe no-op,
+  logged as an error via the SDK's internal logger. No other method changes behavior — every other
+  public method already no-op'd safely on a missing singleton. Consent semantics are unchanged: no
+  network before `setConsent(.granted)`, no silent grant, no state mutation on a pre-init no-op
+  call.
+- **Documented (not changed) the SDK's actor isolation.** The public API is intentionally
+  `@MainActor` — this was already true in v1.4.0 and earlier; it was just undocumented, and the
+  doc comment's "safe to call from any thread" claim was actively misleading (true only for async
+  callers; false for a synchronous call from a non-main-actor context, which is exactly what fails
+  to compile under Swift 6). `Attribr.swift`'s header doc comment and `README.md` now both state
+  the isolation explicitly and show the `@MainActor`-wrapper pattern consumers need. No isolation
+  behavior was relaxed or changed — this is a documentation fix, not a concurrency redesign.
+- Added `Examples/ConsumerCompileCheck/`, a small local-path SPM package that compiles a correct
+  `@MainActor` consumer wrapper against this source tree on every `swift build` run in that
+  directory — a standing regression check for the exact failure mode this release fixes.
+- Added `SetConsentCrashTests.swift`: pre-init no-crash coverage for both fixed methods, a
+  normal-path regression test (`initialize` → `setConsent` unchanged), and a test confirming
+  tracking calls remain no-ops before consent is granted.
+- No attribution semantics changed. No public API removed or renamed.
+
 ## Unreleased — Release hardening for first public GitHub tag
 
 - Removed stale "STUB FILE" placeholder header from `Package.swift`; reconciled its

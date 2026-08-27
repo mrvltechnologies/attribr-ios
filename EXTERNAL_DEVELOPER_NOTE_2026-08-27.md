@@ -30,4 +30,24 @@ Hi — following up on the release-readiness review, here's where things stand:
   third-party adoption is genuinely early — you'd be among the first external integrators, not
   joining an established base of outside users.
 
-Thanks again for the thorough review — it caught real gaps.
+**Update — v1.4.1, addressing your @MainActor and setConsent findings:**
+- **Confirmed and fixed the compile issue.** We reproduced it exactly: a `nonisolated` wrapper
+  calling `Attribr.initialize`/`setConsent`/`trackLaunch` fails to compile under Swift 6 with
+  `call to main actor-isolated static method ... in a synchronous nonisolated context` — this is
+  correct compiler behavior, not an SDK bug. The SDK's public API is intentionally `@MainActor`;
+  we hadn't documented that clearly, and the old doc comment's "safe to call from any thread" claim
+  was actively misleading for a synchronous non-main-actor caller like yours. `README.md` now says
+  this explicitly and shows the fix you already found yourself: mark your wrapper `@MainActor`.
+  We did not relax or remove the isolation — your workaround is the correct, intended pattern.
+- **Fixed the `setConsent()` hard crash you flagged**, and found the same issue in `registerSKAN()`.
+  Both previously called `preconditionFailure` if invoked before `initialize()`; both are now a
+  safe no-op (logged as an error) instead. Your own `isConfigured` guard was masking this for you,
+  but any consumer without an equivalent guard would have crashed — good catch.
+- New: `Examples/ConsumerCompileCheck/` in the repo compiles a correct `@MainActor` wrapper against
+  the SDK on every build, so this specific failure mode has a standing regression check.
+- Released as `v1.4.1`: `.package(url: "https://github.com/mrvltechnologies/attribr-ios", from: "1.4.1")`.
+  GitHub release: https://github.com/mrvltechnologies/attribr-ios/releases/tag/v1.4.1
+- Re-verified clean SwiftPM resolution **and compile** from the real `v1.4.1` tag in a fresh
+  directory (not just dependency resolution this time — an actual `swift build`).
+
+Thanks again for the thorough review — it caught real gaps, twice now.

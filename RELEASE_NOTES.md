@@ -1,24 +1,42 @@
-# Attribr Swift SDK v1.4.0
+# Attribr Swift SDK v1.4.1
 
-**First public GitHub release.** `CHANGELOG.md` documents the SDK's history back to its original
-internal 1.0.0 (Sprint 3); this is the first version actually published as a pushed git tag on
-`origin`, making SPM's `from: "1.4.0"`-style version pinning work for external integrators for the
-first time. It is not the SDK's first version — it is the first one released.
+**Consumer compile hardening.** A patch release addressing two integration-friction issues an
+external developer hit while evaluating v1.4.0 for production/TestFlight use. No attribution
+semantics changed; no public API removed or renamed. See `CHANGELOG.md` for full history.
 
-### Highlights
+### What changed
 
-- Install attribution via a `SHA-256(IdentifierForVendor)` device hash — no IDFA, no AASA file, no
-  URL scheme required.
-- GDPR-gated: zero network requests before `setConsent(.granted)`.
-- App-local install-instance tracking for reinstall detection (Sprint 13).
-- SKAdNetwork conversion-value reporting (`registerSKAN()` / `updateConversionValue`).
-- Revenue, ad-revenue, and subscription-event tracking with server-side dedup by transaction ID.
-- Push-token registration for uninstall detection.
-- `PrivacyInfo.xcprivacy` included — no manual App Store privacy manifest configuration needed.
-- Zero third-party dependencies.
-- MIT licensed.
+- **Fixed a hard crash:** `setConsent()` and `registerSKAN()` called before `initialize()` used to
+  crash the host app via `preconditionFailure`. Both are now a safe no-op (logged as an error).
+  Every other public method already handled this safely — these two were the exceptions.
+- **Documented the SDK's actor isolation, which was true but undocumented (and previously
+  misdescribed):** Attribr's public API is `@MainActor`-isolated. Calling it from a `nonisolated`
+  wrapper type fails to compile under Swift 6 strict concurrency. `README.md` and the SDK's own doc
+  comments now say this explicitly and show the fix — mark your wrapper `@MainActor`:
 
-### Requirements
+  ```swift
+  @MainActor
+  enum MyAttribrWrapper {
+      static func start(apiKey: String) {
+          Attribr.initialize(apiKey: apiKey)
+          Attribr.setConsent(.granted)
+          Attribr.trackLaunch()
+      }
+  }
+  ```
+- Added `Examples/ConsumerCompileCheck/` — a small local-path SPM package that compiles a correct
+  `@MainActor` consumer against the SDK source on every build, as a standing regression check.
+- Added regression tests for both fixes (pre-init no-crash, normal-path unchanged, no-network-
+  before-consent).
+
+### Verified before this release
+
+- Clean SwiftPM resolution **and compile** from a fresh consumer package pointed at the real
+  `v1.4.1` GitHub tag (not just the earlier `v1.4.0` resolution check) — including a build that
+  reproduces the original `@MainActor` compile error against `v1.4.0`, then confirms the fix.
+- Full test suite passing (64 tests, including 5 new).
+
+### Requirements (unchanged from v1.4.0)
 
 - iOS 15+ deployment target
 - Swift 6.0 toolchain (Xcode 16+)
@@ -27,18 +45,15 @@ first time. It is not the SDK's first version — it is the first one released.
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mrvltechnologies/attribr-ios", from: "1.4.0")
+    .package(url: "https://github.com/mrvltechnologies/attribr-ios", from: "1.4.1")
 ]
 ```
 
-### Known limitations
+### Known limitations (unchanged from v1.4.0)
 
-- No React Native wrapper yet — native Swift/Kotlin only. Minimum future scope (initialize, track
-  launch/install, track event/conversion, update conversion value, track revenue, set consent, set
-  push token, GDPR delete) is documented in `BACKLOG.md`. Not a blocker for this release; is a
-  blocker for RN app integration.
-- CocoaPods (`Attribr.podspec`) is present but not yet verified against a real `pod install` — SPM
-  is the primary, tested distribution path.
+- No React Native wrapper yet — native Swift/Kotlin only.
+- CocoaPods (`Attribr.podspec`) verified via `pod lib lint`/`pod spec lint`/a real `pod install` in
+  a prior session; SPM remains the primary, most-exercised distribution path.
 
 ### License
 
