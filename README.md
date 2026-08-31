@@ -107,10 +107,36 @@ Attribr.deleteAllData { success in /* ... */ }
 
 Get your API key from your [attribr.dev](https://attribr.dev) dashboard. Keys are prefixed
 `attr_live_` (production) or `attr_test_` (sandbox/dev) followed by a random secret — 50
-characters total. Treat it as a secret: don't commit it to source control or paste it into logs,
-crash reports, or chat. Store it in an untracked config (e.g. an `.xcconfig` file excluded from
-git, or a build-time environment variable), not hardcoded in a committed source file. Free tier:
-1,000 installs/month.
+characters total.
+
+**Always generate a Client key (`sdk_ingest` scope) for `apiKey` — never a Full key.** This SDK
+ships the key inside your app's compiled binary; while it isn't plaintext-extractable the way a
+JS bundle is, it's still not a secure secret store, so treat it the same way. A Client key can
+only submit ingest events (launch/event/revenue/attribution) — it cannot read install, revenue,
+cohort, retention, or source data from your Attribr dashboard even if extracted. A Full key
+embedded here would let anyone who extracts it read your entire dashboard. See `SECURITY.md`.
+
+Treat the key as a secret regardless of scope: don't commit it to source control or paste it into
+logs, crash reports, or chat. Store it in an untracked config (e.g. an `.xcconfig` file excluded
+from git, or a build-time environment variable), not hardcoded in a committed source file. Free
+tier: 1,000 installs/month.
+
+## Supported Scope
+
+**Tier 1 (this package):** `trackLaunch`, `trackEvent`, `trackRevenue`, `attributeInstall`,
+`deleteAllData`, deep link handling — pure REST client behaviour, no OS-level entitlements beyond
+what StoreKit/UNUserNotificationCenter already require of your app.
+
+**Tier 2 (also in this package, native-only):** SKAdNetwork conversion values
+(`registerSKAN`/`updateConversionValue`), push-token registration for uninstall detection
+(`registerPushToken`), StoreKit 2 transaction reporting with `AppAccountTokenProvider` — these
+have no equivalent in the RN/Expo package (`@mrvltechnologies/attribr-react-native`), which is
+JS-only with no native module. If you need these capabilities, use this Swift package (or the
+Kotlin equivalent for Android), not the RN wrapper.
+
+**Not covered by this package:** Android is a separate package (`sdk/kotlin`); there is no Web
+SDK equivalent to any of the above — `attribr-web.js` is a narrower page-visit/click pixel, not
+a general client SDK, and does not have `trackEvent`/`trackRevenue`/`attributeInstall`.
 
 ## Privacy / Data Flow
 
