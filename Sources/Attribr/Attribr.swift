@@ -49,6 +49,22 @@ public final class Attribr {
         _apiKey = nil
     }
 
+    /// Test-only initializer that threads a stubbed `URLSession` through to the
+    /// internal `NetworkClient`, exactly like `initialize(apiKey:config:)` but
+    /// without requiring live network access. Exists solely so `@testable`
+    /// tests can assert on the exact request a public API call (`trackLaunch`,
+    /// etc.) produces. Not part of the public API surface — no shipping app can
+    /// reach this from outside the module.
+    internal static func initializeForTesting(
+        apiKey: String,
+        config: AttribrConfiguration = AttribrConfiguration(),
+        session: URLSession
+    ) {
+        shared = nil
+        _apiKey = apiKey
+        shared = Attribr(apiKey: apiKey, config: config, session: session)
+    }
+
     /// Nonisolated key store — set once during `initialize()`, read by
     /// `AttribrMonetisation` from async contexts without hopping to MainActor.
     /// Safe because it is written exactly once before any reader exists.
@@ -78,14 +94,14 @@ public final class Attribr {
 
     // MARK: - Init
 
-    private init(apiKey: String, config: AttribrConfiguration) {
+    private init(apiKey: String, config: AttribrConfiguration, session: URLSession? = nil) {
         self.apiKey = apiKey
         self.config = config
         self.log = AttribrLogger(enabled: config.debugLogging)
         self.consent = ConsentManager()
         self.deviceId = DeviceIdentifier()
         self.queue = EventQueue(maxSize: config.maxQueueSize, logger: log)
-        self.network = NetworkClient(apiKey: apiKey, config: config, logger: log)
+        self.network = NetworkClient(apiKey: apiKey, config: config, logger: log, session: session)
         self.deepLinks = DeepLinkHandler(network: network, deviceId: deviceId, logger: log)
         self.skan = SKANManager(network: network, logger: log)
         // Log only the first 10 chars — that is the non-secret "attr_live_" /
@@ -127,18 +143,25 @@ public final class Attribr {
 
     /// Record an app launch. Call this every time the app becomes active.
     /// Silently ignored until consent is `.granted`.
-    public static func trackLaunch() {
+    ///
+    /// - Parameter webClickId: Optional `attribr_web_click_id` token recovered
+    ///   from the app's launch URL via `DeepLinkHandler.extractWebClickId(from:)`.
+    ///   Pass it when your app was opened from a Universal Link that carried the
+    ///   token — the backend verifies it server-side before linking this install
+    ///   to the originating web visit. Blank/empty values are treated as absent.
+    public static func trackLaunch(webClickId: String? = nil) {
         guard let sdk = shared else { return }
         guard sdk.consent.isGranted else {
             sdk.log.debug("trackLaunch skipped — consent not granted")
             return
         }
+        let normalizedWebClickId = (webClickId?.isEmpty == false) ? webClickId : nil
         Task {
             // Flush any events that failed on a previous launch before sending the
             // current one. Without this, queued events are only retried when
             // setConsent(.granted) is called again — which never happens after init.
             await sdk.flushQueue()
-            await sdk.sendTrack()
+            await sdk.sendTrack(webClickId: normalizedWebClickId)
         }
     }
 
@@ -421,7 +444,7 @@ public final class Attribr {
 
     // MARK: - Internal send methods
 
-    private func sendTrack() async {
+    private func sendTrack(webClickId: String? = nil) async {
         let deviceHash = deviceId.hash()
         let appId = Bundle.main.bundleIdentifier ?? "unknown"
         let osVersion = ProcessInfo.processInfo.operatingSystemVersionString
@@ -452,6 +475,13 @@ public final class Attribr {
         ]
         if let country = localeCountry {
             body["country"] = country
+        }
+        // Identity Foundation Phase 12 — optional web-to-mobile handoff token.
+        // Does NOT replace attribution_code (that's a separate flow via
+        // attributeInstall/sendAttribution); backend validates this value
+        // server-side before linking the install to a web_visit row.
+        if let webClickId {
+            body["attribr_web_click_id"] = webClickId
         }
 
         // Re-engagement detection: compare against last *successfully confirmed* seen timestamp.

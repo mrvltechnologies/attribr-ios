@@ -82,6 +82,29 @@ Attribr.trackRevenue(
 )
 ```
 
+### Web-to-mobile handoff (optional)
+
+If your marketing site links into your app carrying an `attribr_web_click_id` query
+parameter (minted by Attribr's own web-visit endpoint — this is not something you
+generate yourself), pass it through on the next `trackLaunch()` call so the backend
+can link the install back to that web visit. The backend verifies the token
+server-side before making that link — the SDK does not assert anything on its own.
+
+```swift
+.onOpenURL { url in
+    let clickId = DeepLinkHandler.extractWebClickId(from: url)
+    Attribr.trackLaunch(webClickId: clickId)
+    Attribr.handleDeepLink(url)   // unrelated — Attribr's own smart-link resolution, if you use it
+}
+```
+
+`extractWebClickId(from:)` is a pure, synchronous helper — no network call, no domain
+restriction (unlike `handleDeepLink`, which only resolves Attribr-owned smart-link
+domains). It returns `nil` for any URL that doesn't carry a validly-shaped token, so
+it's always safe to pass its result straight to `trackLaunch(webClickId:)`. Omitting
+the parameter (or calling `trackLaunch()` with no arguments) behaves exactly as
+before — this is purely additive.
+
 ### SKAdNetwork conversion value
 
 ```swift

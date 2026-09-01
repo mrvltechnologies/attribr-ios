@@ -1,5 +1,34 @@
 # Attribr Swift SDK — Changelog
 
+## Unreleased — Identity Foundation Phase 12: web-to-mobile handoff
+
+Not tagged/published — no release created this phase.
+
+- **`Attribr.trackLaunch(webClickId: String? = nil)`** — new optional parameter,
+  default `nil`. Existing zero-argument call sites compile and behave identically.
+  When supplied and non-blank, the value is sent to `attribr-track` as
+  `attribr_web_click_id`; the backend validates it server-side before linking the
+  install to the originating web visit. Does not replace `attribution_code` (a
+  separate field/flow via `attributeInstall`); does not touch revenue payloads,
+  `deleteAllData`, or SKAN/AppAccountToken behaviour.
+- **`DeepLinkHandler.extractWebClickId(from: URL) -> String?`** — new pure,
+  `nonisolated` static helper. Extracts and validates the `attribr_web_click_id`
+  query parameter (`^awc_[0-9a-f]{24}$`) from a customer's own launch URL. Separate
+  from, and does not modify, the existing `handle(_:)`/smart-link resolution
+  (`attribr.dev/l/{code}`, `attribr://`, `?attribr_link=`) — those remain
+  domain-restricted to `allowedLinkDomains`; this helper is not, since it reads
+  the customer's own URL rather than an Attribr-owned one.
+- Added `Tests/AttribrTests/WebClickIdHandoffTests.swift`: extraction-helper
+  coverage (valid/missing/empty/repeated/malformed/wrong-length/wrong-case
+  tokens, unrelated smart-link params) and end-to-end `trackLaunch` payload
+  coverage (field included/omitted/blank, zero-arg backward compatibility).
+- Added `Attribr.initializeForTesting(apiKey:config:session:)`, an `internal`
+  (not public) test-only seam mirroring the existing `resetForTesting()` hook —
+  lets tests inject a stubbed `URLSession` to assert on real request payloads
+  without live network access. Not reachable from outside the module.
+- No public API removed or renamed. No changes to revenue, ad-revenue, push-token,
+  or subscription-event payloads/tests.
+
 ## 1.4.1 — 2026-08-27 — Consumer compile hardening
 
 Prompted by an external developer's report: their own `nonisolated` Swift wrapper around Attribr

@@ -127,6 +127,33 @@ public final class DeepLinkHandler {
     }
 }
 
+extension DeepLinkHandler {
+    /// Identity Foundation Phase 12 — extracts `attribr_web_click_id` from a
+    /// customer's own Universal Link / custom-scheme URL. This is a SEPARATE
+    /// feature from `handle(_:)`/`extractLinkCode(from:)` above: those resolve
+    /// Attribr-owned smart links (`attribr.dev/l/{code}`, `attribr://`,
+    /// `?attribr_link=`), scoped to `allowedLinkDomains`. This helper reads a
+    /// single query parameter off whatever URL the host app already receives
+    /// — no domain restriction, no network call, no state — and validates it
+    /// against the exact token shape the backend mints
+    /// (`/api/v1/web-visit` → `awc_[0-9a-f]{24}`). An invalid or missing value
+    /// returns `nil` rather than throwing, since a customer's launch URL
+    /// having no attribution token is a normal, non-error case.
+    ///
+    /// - Parameter url: The URL the host app received, e.g. from
+    ///   `.onOpenURL` or `application(_:continue:)`.
+    /// - Returns: The validated `attribr_web_click_id` token, or `nil` if
+    ///   absent, blank, or not shaped like a server-minted token.
+    nonisolated public static func extractWebClickId(from url: URL) -> String? {
+        guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              let value = components.queryItems?.first(where: { $0.name == "attribr_web_click_id" })?.value,
+              !value.isEmpty,
+              value.range(of: #"^awc_[0-9a-f]{24}$"#, options: .regularExpression) != nil
+        else { return nil }
+        return value
+    }
+}
+
 /// Result of processing a deep link.
 public enum DeepLinkResult: Sendable {
     /// URL was not an Attribr deep link — pass to your own URL handler.
