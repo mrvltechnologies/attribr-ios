@@ -165,6 +165,44 @@ public final class Attribr {
         }
     }
 
+    /// Link this device's install to your app's own signed-in user.
+    ///
+    /// Identity Foundation Phase 36. Call this once you have a real,
+    /// authenticated, STABLE internal user identifier — e.g. your auth
+    /// provider's own user UUID (Supabase `session.user.id`, Firebase
+    /// `Auth.auth().currentUser?.uid`, etc.). This lets the Attribr dashboard
+    /// answer "web click → install → known user" for your app.
+    ///
+    /// - Parameter userId: An opaque, stable internal identifier for the
+    ///   signed-in user — never email, name, phone, postcode, address, or any
+    ///   other raw personal identifier, and never a device identifier
+    ///   (Attribr already has its own device hash; passing one here would be
+    ///   redundant, not an identity signal). The value is hashed
+    ///   (HMAC-SHA256, scoped to your customer/app) before it is ever
+    ///   persisted — Attribr never stores the raw value you pass here.
+    ///
+    /// Silently ignored until consent is `.granted`, and silently ignored if
+    /// `userId` is empty — matching every other SDK method's "never crash on
+    /// a caller mistake" convention. Call this AFTER your own sign-in/session
+    /// resolution completes; do not call it for a signed-out/anonymous user
+    /// and do not invent a placeholder ID if none exists yet. A failed
+    /// `identify()` call is always non-fatal: it never blocks sign-in, never
+    /// throws, and has no effect on any other SDK call.
+    public static func identify(userId: String) {
+        guard let sdk = shared else { return }
+        guard sdk.consent.isGranted else {
+            sdk.log.debug("identify skipped — consent not granted")
+            return
+        }
+        guard !userId.isEmpty else {
+            sdk.log.debug("identify skipped — empty userId")
+            return
+        }
+        Task {
+            await sdk.sendIdentify(userId: userId)
+        }
+    }
+
     /// Record a referral attribution.
     /// Call this when the app is opened from a referral link or promo code.
     ///
@@ -531,6 +569,41 @@ public final class Attribr {
                 attempts: 1
             )
             queue.enqueue(event)
+        }
+    }
+
+    /// Identity Foundation Phase 36. Fire-and-forget, non-fatal on failure —
+    /// matches sendEvent's shape exactly. Posts to the Attribr dashboard host
+    /// (/api/v1/identify), NOT the Supabase Edge Functions base URL that
+    /// every other send* method here uses — see AttribrEndpoints.identify's
+    /// own doc comment. `user_id` is the only identity-shaped field in this
+    /// body; the server hashes it (HMAC-SHA256, customer/app-scoped) before
+    /// any persistence and never stores the raw value — see
+    /// dashboard/src/app/api/v1/identify/route.ts.
+    private func sendIdentify(userId: String) async {
+        let deviceHash = deviceId.hash()
+        let appId = Bundle.main.bundleIdentifier ?? "unknown"
+
+        let body: [String: Any] = [
+            "app_id": appId,
+            "device_hash": deviceHash,
+            "user_id": userId,
+        ]
+
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
+
+        let result = await network.post(path: AttribrEndpoints.identify, body: data)
+        switch result {
+        case .success:
+            log.debug("identify: success")
+        case .failure(let err):
+            // Non-fatal by design (see the public identify(userId:) doc
+            // comment) — never queued/retried, unlike trackLaunch/trackEvent.
+            // A missed identify() link is not silently lost data the way a
+            // missed install/event would be: the next successful call (e.g.
+            // the next app launch while still signed in) re-establishes it,
+            // and the write is idempotent server-side.
+            log.error("identify failed: \(err)")
         }
     }
 

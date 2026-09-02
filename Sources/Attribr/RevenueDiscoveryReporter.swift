@@ -51,6 +51,10 @@ internal enum AttribrEndpoints {
     /// Attribr dashboard host — distinct from the SDK's default Supabase
     /// Edge Functions base URL. This is where /api/v1/revenue-discovery lives.
     static let revenueDiscovery = "https://attribr.dev/api/v1/revenue-discovery"
+
+    /// Identity Foundation Phase 36 — /api/v1/identify lives on the same
+    /// dashboard host, not the Supabase Edge Functions base URL.
+    static let identify = "https://attribr.dev/api/v1/identify"
 }
 
 /// Requires iOS 16 / macOS 13 — the platform floor StoreKit 2's
