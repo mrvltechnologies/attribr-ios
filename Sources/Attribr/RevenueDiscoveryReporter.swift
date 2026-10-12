@@ -84,15 +84,23 @@ public enum RevenueDiscoveryReporter {
         }
     }
 
+    /// StoreKit-testing (`.xcode`) transactions are NOT production commercial data — they must
+    /// never be labelled "production" (the previous `default:` arm did exactly that).
+    internal static func environmentString(_ env: AppStore.Environment) -> String {
+        switch env {
+        case .production: return "production"
+        case .sandbox, .xcode: return "sandbox"
+        default: return "sandbox"   // unknown future environment: fail away from production
+        }
+    }
+
+    /// Deterministic, idempotent event identity — the same transaction always yields the same id.
+    internal static func sdkEventID(forTransactionID id: UInt64) -> String { "storekit:\(id)" }
+
     private static func send(transaction: StoreKit.Transaction, appAccountToken: UUID?) async {
         guard let apiKey = Attribr._apiKey else { return }
 
-        let environment: String
-        switch transaction.environment {
-        case .sandbox: environment = "sandbox"
-        case .production: environment = "production"
-        default: environment = "production"
-        }
+        let environment = environmentString(transaction.environment)
 
         var payload: [String: Any] = [
             "app_id": Bundle.main.bundleIdentifier ?? "unknown",
@@ -104,7 +112,7 @@ public enum RevenueDiscoveryReporter {
             "original_transaction_id": String(transaction.originalID),
             // Idempotent across retries and app relaunches — same
             // transaction always produces the same event id.
-            "sdk_event_id": "storekit:\(transaction.id)",
+            "sdk_event_id": sdkEventID(forTransactionID: transaction.id),
             "purchase_date": iso8601.string(from: transaction.purchaseDate),
             "device_event_time": iso8601.string(from: Date()),
             "sdk_install_instance_id_hash": InstallInstance.hashHex(),

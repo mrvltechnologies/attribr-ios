@@ -1,0 +1,98 @@
+{
+  "identifier": "A7A7A7A7-0000-4000-8000-000000000001",
+  "nonConsumableProducts": [],
+  "nonRenewingSubscriptionProducts": [],
+  "products": [],
+  "settings": {
+    "_failTransactionsEnabled": false,
+    "_locale": "en_GB",
+    "_storefront": "GBR",
+    "_storeKitErrors": [
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Load Products"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Purchase"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Verification"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "App Store Sync"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Refresh Receipt"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Fetch Offers"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Redeem Offer"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Create Account"
+      },
+      {
+        "current": null,
+        "enabled": false,
+        "name": "Load Subscription Groups"
+      }
+    ]
+  },
+  "subscriptionGroups": [
+    {
+      "id": "B1B1B1B1-0000-4000-8000-000000000002",
+      "localizations": [
+        {
+          "customAppName": "Feedr",
+          "displayName": "Feedr Plans",
+          "locale": "en_GB"
+        }
+      ],
+      "name": "attribr_lifecycle_group",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "1.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "C2C2C2C2-0000-4000-8000-000000000003",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "Unlimited sessions, audience & analytics. Priority support.",
+              "displayName": "Pro Monthly",
+              "locale": "en_GB"
+            }
+          ],
+          "productID": "com.attribr.lifecycle.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "monthly",
+          "subscriptionGroupID": "B1B1B1B1-0000-4000-8000-000000000002",
+          "type": "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version": {
+    "major": 3,
+    "minor": 0
+  }
+}

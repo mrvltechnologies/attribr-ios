@@ -1,5 +1,19 @@
 # Attribr Swift SDK — Changelog
 
+## Unreleased — Commercial Truth Phase 2A: RevenueDiscoveryLifecycle
+
+Not tagged until StoreKit lifecycle QA is accepted.
+
+- **`RevenueDiscoveryLifecycle.start(reconcileOnLaunch:appAccountToken:)`** (iOS 16+/macOS 13+) — one call
+  after `Attribr.initialize` reports verified StoreKit transactions from `Transaction.updates` (renewals,
+  refunds, off-app purchases) and, once per 24h, from `Transaction.currentEntitlements` (restores and
+  pre-reporter subscribers). Evidence only — never revenue authority. ≤50 transactions per launch,
+  ≤3 reports per transaction id, deterministic `sdk_event_id = storekit:<id>`, existing consent gate and
+  install-instance hash. Never creates or repurposes an `appAccountToken`.
+- **Fix:** `RevenueDiscoveryReporter` labelled StoreKit-testing (`.xcode`) transactions `environment:
+  "production"`; they are now `"sandbox"`. Unknown future environments also fail away from production.
+- `QA/StoreKitHarness` — hosted-test harness (StoreKitTest needs an app host).
+
 ## Unreleased — Identity Foundation Phase 12: web-to-mobile handoff
 
 Not tagged/published — no release created this phase.
