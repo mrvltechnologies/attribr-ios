@@ -24,8 +24,14 @@ final class NetworkClient: @unchecked Sendable {
     private let baseURL: URL
     private let maxRetries: Int
     private let logger: AttribrLogger
+    /// Consulted immediately before EVERY request attempt (including retries after back-off).
+    /// `false` ⇒ nothing is sent and `.failure(.noConsent)` is returned. The GDPR deletion endpoint is
+    /// exempted by the caller's gate, never here. Default allows everything (standalone/test use).
+    private let consentGate: @Sendable (String) -> Bool
 
-    init(apiKey: String, config: AttribrConfiguration, logger: AttribrLogger, session: URLSession? = nil) {
+    init(apiKey: String, config: AttribrConfiguration, logger: AttribrLogger, session: URLSession? = nil,
+         consentGate: @escaping @Sendable (String) -> Bool = { _ in true }) {
+        self.consentGate = consentGate
         self.apiKey = apiKey
         self.baseURL = config.baseURL
         self.maxRetries = config.maxRetries
@@ -70,6 +76,12 @@ final class NetworkClient: @unchecked Sendable {
         var attempt = 0
 
         while attempt < maxRetries {
+            // Dispatch-time consent enforcement: consent may have been withdrawn after this call was
+            // scheduled (unstructured Task, queue flush, or a retry sleeping in back-off).
+            guard consentGate(path) else {
+                logger.debug("\(method) \(path) not sent — consent not granted at dispatch")
+                return .failure(.noConsent)
+            }
             var request = URLRequest(url: url)
             request.httpMethod = method
             request.httpBody = body
