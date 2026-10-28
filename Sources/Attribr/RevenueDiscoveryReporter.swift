@@ -151,6 +151,24 @@ public enum RevenueDiscoveryReporter {
             return
         }
 
+        await dispatch(body: body, apiKey: apiKey, label: "tx=\(transaction.id) product=\(transaction.productID) env=\(environment)")
+    }
+
+    // MARK: - Direct dispatch (consent enforced per attempt)
+
+    /// Session used for the direct intake request. Production: `.shared`. Replaceable only by tests.
+    nonisolated(unsafe) internal static var urlSession: URLSession = .shared
+    /// Back-off before the single transport retry. Replaceable only by tests.
+    nonisolated(unsafe) internal static var retryDelayNanoseconds: UInt64 = 2_000_000_000
+
+    /// Sends one revenue-discovery payload directly to the dashboard intake.
+    ///
+    /// Consent is re-checked immediately before EVERY attempt, including the retry that follows the
+    /// back-off sleep (attribr-ios#1 / PR #2 review): a withdrawal while sleeping, or any state other than
+    /// `.granted` at dispatch, sends nothing and queues nothing. Failure re-queueing additionally goes through
+    /// `Attribr.enqueueRevenueDiscovery`, which refuses to queue unless consent still allows it.
+    /// A request already on the wire when consent is withdrawn cannot be recalled.
+    internal static func dispatch(body: Data, apiKey: String, label: String) async {
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -158,49 +176,27 @@ public enum RevenueDiscoveryReporter {
         request.httpBody = body
         request.timeoutInterval = 10
 
-        #if DEBUG
-        print("[RevenueDiscoveryReporter] attempt tx=\(transaction.id) product=\(transaction.productID) env=\(environment)")
-        #endif
-
-        // Small bounded retry on network failure only — never retries
-        // in-line on a clean HTTP error response (4xx/5xx), since there is
-        // no reason to hammer a server that just answered. Failures are no
-        // longer terminal, though: transient outcomes (transport failure,
-        // 429, 5xx) are parked on the SDK's durable EventQueue and replayed
-        // by the normal flush path on the next launch/consent grant.
-        // `sdk_event_id` is deterministic per transaction, so any resend is
-        // deduplicated server-side. Only a non-429 4xx stays terminal — the
-        // server definitively rejected this exact payload, and replaying an
-        // identical body can never succeed.
+        // Small bounded retry on transport failure only; transient outcomes (transport failure, 429, 5xx) are
+        // parked on the SDK's durable queue. `sdk_event_id` is deterministic per transaction, so a resend is
+        // deduplicated server-side. A non-429 4xx stays terminal.
         for attempt in 0..<2 {
+            guard await Attribr.isConsentGranted else {
+                #if DEBUG
+                print("[RevenueDiscoveryReporter] \(label) not sent — consent not granted at dispatch")
+                #endif
+                return
+            }
             do {
-                let (data, response) = try await URLSession.shared.data(for: request)
-                if let http = response as? HTTPURLResponse {
-                    #if DEBUG
-                    var trackingStatus = "unknown"
-                    var dedupe = "unknown"
-                    if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                        trackingStatus = (json["tracking_status"] as? String) ?? (json["status"] as? String) ?? "unknown"
-                        dedupe = (json["duplicate"] as? Bool).map { $0 ? "duplicate" : "new" } ?? "unknown"
-                    }
-                    print("[RevenueDiscoveryReporter] tx=\(transaction.id) http=\(http.statusCode) tracking_status=\(trackingStatus) dedupe=\(dedupe)")
-                    #endif
-                    if http.statusCode == 429 || http.statusCode >= 500 {
-                        // Server overloaded or erroring — durable retry later.
-                        await Attribr.enqueueRevenueDiscovery(body)
-                    }
+                let (_, response) = try await urlSession.data(for: request)
+                if let http = response as? HTTPURLResponse, http.statusCode == 429 || http.statusCode >= 500 {
+                    await Attribr.enqueueRevenueDiscovery(body)
                 }
                 return
             } catch {
                 if attempt == 0 {
-                    try? await Task.sleep(nanoseconds: 2_000_000_000)
+                    try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
                     continue
                 }
-                #if DEBUG
-                print("[RevenueDiscoveryReporter] tx=\(transaction.id) failed after retry, queueing for durable retry (non-fatal): \(error.localizedDescription)")
-                #endif
-                // Both transport attempts failed (offline, DNS, timeout…) —
-                // hand the payload to the EventQueue instead of dropping it.
                 await Attribr.enqueueRevenueDiscovery(body)
             }
         }
