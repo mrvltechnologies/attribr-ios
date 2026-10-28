@@ -101,7 +101,14 @@ public final class Attribr {
         self.consent = ConsentManager()
         self.deviceId = DeviceIdentifier()
         self.queue = EventQueue(maxSize: config.maxQueueSize, logger: log)
-        self.network = NetworkClient(apiKey: apiKey, config: config, logger: log, session: session)
+        let consentForGate = self.consent
+        self.network = NetworkClient(apiKey: apiKey, config: config, logger: log, session: session,
+                                     consentGate: { path in
+            // Every send path is already consent-gated at its public entry point; this re-check at
+            // dispatch closes the window between scheduling and sending. Only the GDPR deletion
+            // endpoint is allowed without consent (the user is exercising a right, not being tracked).
+            path == AttribrEndpoints.deleteUserData || consentForGate.isGranted
+        })
         self.deepLinks = DeepLinkHandler(network: network, deviceId: deviceId, logger: log)
         self.skan = SKANManager(network: network, logger: log)
         // Log only the first 10 chars — that is the non-secret "attr_live_" /
@@ -133,8 +140,17 @@ public final class Attribr {
             AttribrLogger(enabled: false).error("Attribr.setConsent() called before Attribr.initialize() — ignored")
             return
         }
+        let previous = sdk.consent.state
         sdk.consent.set(state)
         sdk.log.info("Consent set to: \(state.rawValue)")
+        // Withdrawal (or any move away from .granted, e.g. a host resetting a legacy implied grant to
+        // .unknown) discards the not-yet-sent backlog so it can never be uploaded later — neither by a
+        // flush that is already running nor after a future explicit opt-in. Deletion requests are kept.
+        // Data already delivered is untouched (server-side deletion is the DSR path).
+        if state == .revoked || (previous == .granted && state != .granted) {
+            let dropped = sdk.queue.purge()
+            sdk.log.info("Consent no longer granted — discarded \(dropped) queued event(s)")
+        }
         if state == .granted {
             // Flush any events that were queued while consent was unknown
             Task { await sdk.flushQueue() }
@@ -449,6 +465,9 @@ public final class Attribr {
     /// class (e.g. `RevenueDiscoveryReporter`, which historically only checked
     /// `_apiKey != nil` and therefore bypassed the consent gate entirely).
     /// `nil` means the SDK has not been initialised yet.
+    /// Test seam: how many events are currently queued (nil before `initialize`).
+    internal static var queuedEventCount: Int? { shared?.queue.count }
+
     internal static var consentState: ConsentState? {
         shared?.consent.state
     }
@@ -568,7 +587,7 @@ public final class Attribr {
                 enqueuedAt: Date(),
                 attempts: 1
             )
-            queue.enqueue(event)
+            enqueueAfterFailedSend(event, result: result)
         }
     }
 
@@ -640,7 +659,7 @@ public final class Attribr {
                 enqueuedAt: Date(),
                 attempts: 1
             )
-            queue.enqueue(event)
+            enqueueAfterFailedSend(event, result: result)
         }
     }
 
@@ -677,7 +696,7 @@ public final class Attribr {
                 enqueuedAt: Date(),
                 attempts: 1
             )
-            queue.enqueue(event)
+            enqueueAfterFailedSend(event, result: result)
         }
     }
 
@@ -688,7 +707,7 @@ public final class Attribr {
 
         guard let data = try? JSONSerialization.data(withJSONObject: body) else { return false }
 
-        let result = await network.delete(path: "attribr-delete-user-data", body: data)
+        let result = await network.delete(path: AttribrEndpoints.deleteUserData, body: data)
         switch result {
         case .success:
             // Clear every local persistence layer so this device cannot be
@@ -740,7 +759,7 @@ public final class Attribr {
                 enqueuedAt: Date(),
                 attempts: 1
             )
-            queue.enqueue(event)
+            enqueueAfterFailedSend(event, result: result)
         }
     }
 
@@ -805,7 +824,7 @@ public final class Attribr {
                 enqueuedAt: Date(),
                 attempts: 1
             )
-            queue.enqueue(event)
+            enqueueAfterFailedSend(event, result: result)
         }
     }
 
@@ -846,8 +865,16 @@ public final class Attribr {
                 enqueuedAt: Date(),
                 attempts: 1
             )
-            queue.enqueue(event)
+            enqueueAfterFailedSend(event, result: result)
         }
+    }
+
+    /// A failed live send is queued for retry — unless it failed because consent is gone, in which case the
+    /// payload must be dropped, not parked for a later grant.
+    private func enqueueAfterFailedSend(_ event: QueuedEvent, result: NetworkResult) {
+        if case .failure(.noConsent) = result { return }
+        guard consent.isGranted else { return }
+        queue.enqueue(event)
     }
 
     // MARK: - Queue flush
@@ -868,6 +895,9 @@ public final class Attribr {
         log.info("Flushing \(pending.count) queued events")
 
         for event in pending {
+            // Re-check before EVERY event: consent can be withdrawn while a flush is suspended in a
+            // network await. Parked events stay queued (unknown) or were purged (revoked).
+            if !consent.isGranted && event.kind != .delete { continue }
             if event.attempts >= EventQueue.maxAttempts {
                 queue.remove(id: event.id)
                 log.error("Evicting undeliverable event after \(EventQueue.maxAttempts) attempts: \(event.kind.rawValue)")
@@ -879,7 +909,7 @@ public final class Attribr {
             switch event.kind {
             case .track, .event:   path = "attribr-track"; method = "POST"
             case .attribute:       path = "attribr-attribute"; method = "POST"
-            case .delete:          path = "attribr-delete-user-data"; method = "DELETE"
+            case .delete:          path = AttribrEndpoints.deleteUserData; method = "DELETE"
             case .adRevenue:       path = "attribr-ad-revenue"; method = "POST"
             case .subscriptionEvent: path = "attribr-subscription-event"; method = "POST"
             case .revenue:         path = "attribr-revenue"; method = "POST"
@@ -898,6 +928,8 @@ public final class Attribr {
             switch result {
             case .success:
                 queue.remove(id: event.id)
+            case .failure(.noConsent):
+                break   // blocked at dispatch: not a delivery failure, must not burn an attempt
             case .failure:
                 queue.markFailed(id: event.id)
             }

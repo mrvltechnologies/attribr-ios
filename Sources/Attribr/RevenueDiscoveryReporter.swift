@@ -48,6 +48,10 @@ import Foundation
 /// full iOS 15 / macOS 12 floor) can reference the absolute URL when
 /// replaying queued `.revenueDiscovery` events without an availability check.
 internal enum AttribrEndpoints {
+    /// GDPR deletion (relative to the Edge Functions base URL). The only endpoint that may be
+    /// called without granted consent.
+    static let deleteUserData = "attribr-delete-user-data"
+
     /// Attribr dashboard host — distinct from the SDK's default Supabase
     /// Edge Functions base URL. This is where /api/v1/revenue-discovery lives.
     static let revenueDiscovery = "https://attribr.dev/api/v1/revenue-discovery"

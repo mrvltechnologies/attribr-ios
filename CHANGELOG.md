@@ -1,5 +1,17 @@
 # Attribr Swift SDK — Changelog
 
+## Unreleased — Fix: consent is enforced at dispatch (attribr-ios#1)
+
+Not tagged. Behaviour change for host apps:
+- `NetworkClient` re-checks consent immediately before **every** request attempt, including retries after back-off. Only the
+  GDPR deletion endpoint (`attribr-delete-user-data`) may be sent without granted consent.
+- `flushQueue()` re-checks consent before **each** queued event; a consent-blocked send is not counted as a delivery failure.
+- A send blocked by withdrawal is **dropped**, not re-queued.
+- `setConsent(.revoked)`, or any move from `.granted` to another state (e.g. a host resetting a legacy implied grant to
+  `.unknown`), **discards the undelivered queue** except pending deletion requests. Already-delivered data is unaffected.
+  Events parked while `.unknown` still flush after a first explicit `.granted`.
+- Residual: a request already on the wire when consent is withdrawn cannot be recalled.
+
 ## Unreleased — Commercial Truth Phase 2A: RevenueDiscoveryLifecycle
 
 Not tagged until StoreKit lifecycle QA is accepted.
