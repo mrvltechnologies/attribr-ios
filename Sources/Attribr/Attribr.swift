@@ -489,6 +489,14 @@ public final class Attribr {
     ///   other send methods enqueue after their first failed attempt.
     internal static func enqueueRevenueDiscovery(_ payload: Data, attempts: Int = 1) {
         guard let sdk = shared else { return }
+        // Never persist new data once consent is withdrawn. `.unknown` may PARK a first, never-attempted payload
+        // (attempts == 0) for a later explicit grant; a re-queue after a failed send (attempts > 0) requires
+        // consent to still be granted.
+        switch sdk.consent.state {
+        case .revoked: return
+        case .unknown: guard attempts == 0 else { return }
+        case .granted: break
+        }
         let event = QueuedEvent(
             id: UUID().uuidString,
             kind: .revenueDiscovery,

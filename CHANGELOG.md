@@ -10,6 +10,10 @@ Not tagged. Behaviour change for host apps:
 - `setConsent(.revoked)`, or any move from `.granted` to another state (e.g. a host resetting a legacy implied grant to
   `.unknown`), **discards the undelivered queue** except pending deletion requests. Already-delivered data is unaffected.
   Events parked while `.unknown` still flush after a first explicit `.granted`.
+- `RevenueDiscoveryReporter` (PR review): its direct intake request now re-checks consent before **every** attempt
+  including the retry after back-off; it no longer re-queues after withdrawal (`enqueueRevenueDiscovery` refuses when
+  `.revoked`, and refuses a post-failure re-queue unless `.granted`; first-time parking while `.unknown` is unchanged).
+  Debug-only `tracking_status`/`duplicate` console logging of the response was dropped in the refactor.
 - Residual: a request already on the wire when consent is withdrawn cannot be recalled.
 
 ## Unreleased — Commercial Truth Phase 2A: RevenueDiscoveryLifecycle

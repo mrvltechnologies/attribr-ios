@@ -140,12 +140,14 @@ final class HoldingURLProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) private static var held: HoldingURLProtocol?
     nonisolated(unsafe) static var holdFirst = false
     nonisolated(unsafe) static var statusCode = 200
+    nonisolated(unsafe) static var failTransport = false
 
     static var requests: [URLRequest] { lock.lock(); defer { lock.unlock() }; return _requests }
-    static func reset() { lock.lock(); _requests = []; held = nil; holdFirst = false; statusCode = 200; lock.unlock() }
-    static func releaseHeld() {
+    static func reset() { lock.lock(); _requests = []; held = nil; holdFirst = false; statusCode = 200; failTransport = false; lock.unlock() }
+    static func releaseHeld() { releaseHeldWith(200) }
+    static func releaseHeldWith(_ code: Int) {
         lock.lock(); let h = held; held = nil; lock.unlock()
-        h?.finish(200)
+        h?.finish(code)
     }
 
     override class func canInit(with request: URLRequest) -> Bool { true }
@@ -157,7 +159,9 @@ final class HoldingURLProtocol: URLProtocol, @unchecked Sendable {
         let shouldHold = Self.holdFirst && Self.held == nil
         if shouldHold { Self.held = self }
         let code = Self.statusCode
+        let fail = Self.failTransport
         Self.lock.unlock()
+        if fail { client?.urlProtocol(self, didFailWithError: URLError(.notConnectedToInternet)); return }
         if !shouldHold { finish(code) }
     }
 
