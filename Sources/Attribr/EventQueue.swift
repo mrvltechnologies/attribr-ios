@@ -99,6 +99,18 @@ final class EventQueue: @unchecked Sendable {
         }
     }
 
+    /// Drops every queued event except those whose kind is in `keeping` (GDPR deletion requests must survive
+    /// a consent withdrawal). Returns how many were discarded. Persists the result.
+    @discardableResult
+    func purge(keeping: Set<QueuedEvent.EventKind> = [.delete]) -> Int {
+        lock.withLock {
+            let before = events.count
+            events.removeAll { !keeping.contains($0.kind) }
+            persist()
+            return before - events.count
+        }
+    }
+
     // MARK: - Persistence
 
     private func persist() {
