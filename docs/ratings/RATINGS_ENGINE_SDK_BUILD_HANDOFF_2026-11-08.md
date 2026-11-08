@@ -91,4 +91,4 @@ Produce a signed-off engineering evidence report with package SHA, toolchain, al
 
 ## 5. Final engineering verdict (pre-Claude)
 
-**T1 previously isolated-test PASS. T2 Cleanr source-only shadow integration previously isolated-test PASS. T3 SDK CORE SOURCE PREPARED, NEW REAL-PACKAGE TESTS NOT RUN.** No merge, production change, SDK tag, telemetry or native prompt change. Claude owns the actual Swift package/Xcode build and compatibility fixes; Berea owns independent assurance; owner controls release.
+**T1 previously isolated-test PASS. T2 Cleanr source-only shadow integration previously isolated-test PASS. ADDITIONAL SDK ASSEMBLY SOURCE PREPARED, NEW REAL-PACKAGE TESTS NOT RUN.** No merge, production change, SDK tag, telemetry or native prompt change. Claude owns the actual Swift package/Xcode build and compatibility fixes; Berea owns independent assurance; owner controls release.
