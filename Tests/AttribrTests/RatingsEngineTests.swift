@@ -279,6 +279,18 @@ final class RatingsEngineTests: XCTestCase {
         }
     }
 
+    func testTelemetryForwarderRejectsWithoutBothExplicitPermissions() async {
+        await MainActor.run {
+            let payload = RatingsTelemetryEvent(event:.valueMoment, mode:.shadow,
+                                                policy:.cleanrLegacyParity,
+                                                moment:.confirmedExport)
+            XCTAssertFalse(RatingsAnalyticsForwarder.submitIfApproved(
+                payload, productDisclosureApproved:false, analyticsConsentApproved:true))
+            XCTAssertFalse(RatingsAnalyticsForwarder.submitIfApproved(
+                payload, productDisclosureApproved:true, analyticsConsentApproved:false))
+        }
+    }
+
     func testPrivacyContractUsesOnlyClosedFieldsWithoutNetwork() {
         let event=RatingsTelemetryEvent(
             event:.promptRequested,mode:.shadow,policy:.cleanrLegacyParity,
