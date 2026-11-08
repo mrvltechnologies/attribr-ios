@@ -40,7 +40,8 @@ final class RatingsOpportunitySchedulerTests: XCTestCase {
         let completed = expectation(description: "safe context rechecked")
         let forbidden = expectation(description: "no native prompt in background")
         forbidden.isInverted = true
-        await MainActor.run {
+        // Keep the scheduler alive until the delayed opportunity is evaluated.
+        let retainedScheduler = await MainActor.run {
             let p = RatingsPolicy(version: "scheduler-v1", mode: .active,
                                   minimumConfirmedWins: 1, cooldownDays: 90)
             let engine = try! RatingsEngine(policy: p, store: RatingsSchedulerStore(),
@@ -61,8 +62,10 @@ final class RatingsOpportunitySchedulerTests: XCTestCase {
                     XCTAssertEqual(result, .suppressed(.background))
                     completed.fulfill()
                 })
+            return scheduler
         }
         await fulfillment(of: [completed], timeout: 2)
         await fulfillment(of: [forbidden], timeout: 0.1)
+        await MainActor.run { retainedScheduler.cancel() }
     }
 }
