@@ -37,6 +37,7 @@ public final class RatingsEngine {
     private var saved: RatingsStoreSnapshot
     private var startedSession = false
     private var confirmedValueThisSession = false
+    private var canImportLegacy: Bool
 
     /// Active requests require BOTH .active policy AND a separately approved
     /// app integration flag. Defaults are always non-requesting.
@@ -49,9 +50,11 @@ public final class RatingsEngine {
         self.policy = policy
         self.store = store
         self.activeRequestsAuthorised = activeRequestsAuthorised
-        self.saved = try store.load() ?? RatingsStoreSnapshot(
+        let existing = try store.load()
+        self.saved = existing ?? RatingsStoreSnapshot(
             state: RatingsLocalState(sessionCount: 0)
         )
+        self.canImportLegacy = existing == nil
         // Per-launch request and value gates are intentionally never restored.
         self.saved.state.attemptedThisLaunch = false
     }
@@ -68,6 +71,7 @@ public final class RatingsEngine {
         if next.state.firstSeenAt == nil { next.state.firstSeenAt = now }
         try store.save(next)
         saved = next
+        canImportLegacy = false
         startedSession = true
         return true
     }
@@ -83,7 +87,7 @@ public final class RatingsEngine {
         lastRequestAttemptAt: Date?,
         now: Date = Date()
     ) throws -> Bool {
-        guard !startedSession, saved.state.sessionCount == 0,
+        guard canImportLegacy, !startedSession, saved.state.sessionCount == 0,
               saved.state.confirmedWins == 0,
               saved.state.lastRequestAttemptAt == nil,
               saved.requestAttemptHistory.isEmpty else {
@@ -97,6 +101,7 @@ public final class RatingsEngine {
         next.requestAttemptHistory = lastRequestAttemptAt.map { [$0] } ?? []
         try store.save(next)
         saved = next
+        canImportLegacy = false
         return true
     }
 
@@ -114,6 +119,7 @@ public final class RatingsEngine {
         // Persist first. Failed storage must never advance in-memory state.
         try store.save(next)
         saved = next
+        canImportLegacy = false
         confirmedValueThisSession = true
         return true
     }
@@ -131,6 +137,7 @@ public final class RatingsEngine {
         edit(&next)
         try store.save(next)
         saved = next
+        canImportLegacy = false
     }
 
     /// Returns a pure decision; never calls StoreKit. Use this for shadow
@@ -185,6 +192,7 @@ public final class RatingsEngine {
             return .persistenceUnavailable
         }
         saved = next
+        canImportLegacy = false
         // No work between the saved guard and native call may suspend.
         let invoked = nativeRequest()
         return invoked ? .nativeRequestInvoked : .bridgeUnavailableAfterReservation
