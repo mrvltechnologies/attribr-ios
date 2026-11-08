@@ -22,10 +22,18 @@ final class RatingsEligibilityTests: XCTestCase {
         RatingsLocalState(confirmedWins: wins, sessionCount: sessions,
             lastRequestAttemptAt: daysSinceAttempt.map { now.addingTimeInterval(TimeInterval(-$0 * 86_400)) })
     }
+    /// Deterministic calendar: the default `Calendar(identifier:)` uses the machine's timezone, which made
+    /// `now - N*86_400s` land on N-1 calendar days whenever a DST change fell inside the window (found on a
+    /// Europe/London macOS run; the earlier Linux-UTC run could not see it).
+    private func calendar(_ zone: String) -> Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: zone)!
+        return c
+    }
     private func reason(_ state: RatingsLocalState, _ policy: RatingsPolicy? = nil,
-                        _ context: RatingsOpportunity? = nil) -> RatingsReason {
+                        _ context: RatingsOpportunity? = nil, zone: String = "UTC") -> RatingsReason {
         RatingsEligibility.evaluate(state: state, policy: policy ?? self.policy,
-            opportunity: context ?? opportunity(), calendar: Calendar(identifier: .gregorian)).reason
+            opportunity: context ?? opportunity(), calendar: calendar(zone)).reason
     }
     func testCleanrParityConfigurationAndShadowNeverRequestsNativeReview() {
         XCTAssertEqual(policy.minimumConfirmedWins, 3)
@@ -43,6 +51,34 @@ final class RatingsEligibilityTests: XCTestCase {
         XCTAssertEqual(reason(state(daysSinceAttempt: 89)), .cooldown)
         XCTAssertEqual(reason(state(daysSinceAttempt: 90)), .eligible)
         XCTAssertEqual(reason(state(daysSinceAttempt: 91)), .eligible)
+    }
+    /// Parity oracle: Cleanr's legacy ReviewPrompter computes
+    /// `Calendar.current.dateComponents([.day], from: lastAsked, to: Date()).day >= 90`. The engine must agree with that
+    /// exact formula in every timezone, including across DST changes (90*86_400s is NOT always 90 calendar days).
+    func testCooldownMatchesLegacyCalendarDayFormulaAcrossTimezonesAndDST() {
+        for zone in ["UTC", "Europe/London", "America/New_York", "Pacific/Auckland", "Asia/Kolkata"] {
+            let cal = calendar(zone)
+            for seconds in stride(from: 0, through: 200 * 86_400, by: 3 * 3_600) {
+                let last = now.addingTimeInterval(TimeInterval(-seconds))
+                var s = state()
+                s.lastRequestAttemptAt = last
+                let legacyAllows = (cal.dateComponents([.day], from: last, to: now).day ?? 0) >= 90
+                XCTAssertEqual(reason(s, zone: zone) == .eligible, legacyAllows,
+                               "\(zone): \(seconds)s since last attempt")
+            }
+        }
+    }
+    func testCooldownIsCalendarDaysNotElapsedSecondsAcrossDST() {
+        let london = calendar("Europe/London")
+        let ninetyCalendarDaysAgo = london.date(byAdding: .day, value: -90, to: now)!
+        let eightyNineCalendarDaysAgo = london.date(byAdding: .day, value: -89, to: now)!
+        var s = state(); s.lastRequestAttemptAt = ninetyCalendarDaysAgo
+        XCTAssertEqual(reason(s, zone: "Europe/London"), .eligible)
+        s.lastRequestAttemptAt = eightyNineCalendarDaysAgo
+        XCTAssertEqual(reason(s, zone: "Europe/London"), .cooldown)
+        // 90*86_400 elapsed seconds spans the UK autumn clock change here => only 89 calendar days (legacy behaviour).
+        s.lastRequestAttemptAt = now.addingTimeInterval(-90 * 86_400)
+        XCTAssertEqual(reason(s, zone: "Europe/London"), .cooldown)
     }
     func testOncePerLaunchAndAtomicTimestampMarker() {
         var s = state()

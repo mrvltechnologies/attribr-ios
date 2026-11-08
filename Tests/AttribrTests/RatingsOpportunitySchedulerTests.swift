@@ -9,30 +9,29 @@ private final class RatingsSchedulerStore: RatingsStateStore {
     func save(_ newValue: RatingsStoreSnapshot) throws { snapshot = newValue }
 }
 
+@MainActor
 final class RatingsOpportunitySchedulerTests: XCTestCase {
     func testCancelledOpportunityCannotInvokeNativeReview() async {
         let forbidden = expectation(description: "native bridge must never execute")
         forbidden.isInverted = true
-        await MainActor.run {
-            let store = RatingsSchedulerStore()
-            let p = RatingsPolicy(version: "scheduler-v1", mode: .active,
-                                  minimumConfirmedWins: 1, cooldownDays: 90)
-            let engine = try! RatingsEngine(policy: p, store: store,
-                                            activeRequestsAuthorised: true)
-            try! engine.beginSession()
-            try! engine.recordConfirmedValueMoment(
-                .init(receiptID: UUID(), strength: .strong, isConfirmed: true))
-            let scheduler = RatingsOpportunityScheduler()
-            scheduler.schedule(engine: engine, delayNanoseconds: 700_000_000,
-                currentOpportunity: {
-                    RatingsOpportunity(now: Date(), isForeground: true, hasConfirmedValueMoment: true)
-                },
-                nativeRequest: {
-                    forbidden.fulfill()
-                    return true
-                })
-            scheduler.cancel()
-        }
+        let store = RatingsSchedulerStore()
+        let p = RatingsPolicy(version: "scheduler-v1", mode: .active,
+                              minimumConfirmedWins: 1, cooldownDays: 90)
+        let engine = try! RatingsEngine(policy: p, store: store,
+                                        activeRequestsAuthorised: true)
+        try! engine.beginSession()
+        try! engine.recordConfirmedValueMoment(
+            .init(receiptID: UUID(), strength: .strong, isConfirmed: true))
+        let scheduler = RatingsOpportunityScheduler()
+        scheduler.schedule(engine: engine, delayNanoseconds: 700_000_000,
+            currentOpportunity: {
+                RatingsOpportunity(now: Date(), isForeground: true, hasConfirmedValueMoment: true)
+            },
+            nativeRequest: {
+                forbidden.fulfill()
+                return true
+            })
+        scheduler.cancel()
         await fulfillment(of: [forbidden], timeout: 1.0)
     }
 
@@ -41,31 +40,28 @@ final class RatingsOpportunitySchedulerTests: XCTestCase {
         let forbidden = expectation(description: "no native prompt in background")
         forbidden.isInverted = true
         // Keep the scheduler alive until the delayed opportunity is evaluated.
-        let retainedScheduler = await MainActor.run {
-            let p = RatingsPolicy(version: "scheduler-v1", mode: .active,
-                                  minimumConfirmedWins: 1, cooldownDays: 90)
-            let engine = try! RatingsEngine(policy: p, store: RatingsSchedulerStore(),
-                                            activeRequestsAuthorised: true)
-            try! engine.beginSession()
-            try! engine.recordConfirmedValueMoment(
-                .init(receiptID: UUID(), strength: .strong, isConfirmed: true))
-            let scheduler = RatingsOpportunityScheduler()
-            scheduler.schedule(engine: engine, delayNanoseconds: 700_000_000,
-                currentOpportunity: {
-                    RatingsOpportunity(now: Date(), isForeground: false, hasConfirmedValueMoment: true)
-                },
-                nativeRequest: {
-                    forbidden.fulfill()
-                    return true
-                },
-                onOutcome: { result in
-                    XCTAssertEqual(result, .suppressed(.background))
-                    completed.fulfill()
-                })
-            return scheduler
-        }
+        let p = RatingsPolicy(version: "scheduler-v1", mode: .active,
+                              minimumConfirmedWins: 1, cooldownDays: 90)
+        let engine = try! RatingsEngine(policy: p, store: RatingsSchedulerStore(),
+                                        activeRequestsAuthorised: true)
+        try! engine.beginSession()
+        try! engine.recordConfirmedValueMoment(
+            .init(receiptID: UUID(), strength: .strong, isConfirmed: true))
+        let retainedScheduler = RatingsOpportunityScheduler()
+        retainedScheduler.schedule(engine: engine, delayNanoseconds: 700_000_000,
+            currentOpportunity: {
+                RatingsOpportunity(now: Date(), isForeground: false, hasConfirmedValueMoment: true)
+            },
+            nativeRequest: {
+                forbidden.fulfill()
+                return true
+            },
+            onOutcome: { result in
+                XCTAssertEqual(result, .suppressed(.background))
+                completed.fulfill()
+            })
         await fulfillment(of: [completed], timeout: 2)
         await fulfillment(of: [forbidden], timeout: 0.1)
-        await MainActor.run { retainedScheduler.cancel() }
+        retainedScheduler.cancel()
     }
 }
