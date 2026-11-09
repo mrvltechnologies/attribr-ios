@@ -55,6 +55,75 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
             .init(receiptID: receipt, strength: .strong, isConfirmed: true)))
     }
 
+    func testTwoPreconstructedEnginesCountOneSessionPerProcessNamespace() throws {
+        let store = CoordinatedRatingsFakeStore()
+        let a = try RatingsEngine(policy: policy(), store: store,
+                                  activeRequestsAuthorised: true)
+        let b = try RatingsEngine(policy: policy(), store: store,
+                                  activeRequestsAuthorised: true)
+
+        XCTAssertTrue(try a.beginSession(now: now))
+        XCTAssertFalse(try b.beginSession(now: now.addingTimeInterval(10)))
+        XCTAssertEqual(try store.load()?.state.sessionCount, 1)
+        XCTAssertEqual(a.state.sessionCount, 1)
+        XCTAssertEqual(b.state.sessionCount, 1)
+
+        // The joining engine is still part of the active process session and
+        // can record value without creating a second persisted session.
+        XCTAssertTrue(try b.recordConfirmedValueMoment(
+            .init(receiptID: UUID(), strength: .strong, isConfirmed: true)))
+        XCTAssertEqual(try store.load()?.state.confirmedWins, 1)
+        XCTAssertEqual(try store.load()?.state.sessionCount, 1)
+    }
+
+    func testSeparateUserDefaultsHandlesCountOneSessionPerProcessNamespace() throws {
+        let suite = "ratings.sessions." + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let namespace = "com.mrvl.sessions." + UUID().uuidString
+        let storeA = try RatingsUserDefaultsStore(namespace: namespace, defaults: defaults)
+        let storeB = try RatingsUserDefaultsStore(namespace: namespace, defaults: defaults)
+        let a = try RatingsEngine(policy: policy(), store: storeA)
+        let b = try RatingsEngine(policy: policy(), store: storeB)
+
+        XCTAssertTrue(try a.beginSession(now: now))
+        XCTAssertFalse(try b.beginSession(now: now.addingTimeInterval(30)))
+        XCTAssertEqual(try storeA.load()?.state.sessionCount, 1)
+        XCTAssertEqual(try storeB.load()?.state.sessionCount, 1)
+    }
+
+    func testFailedSessionPersistenceReleasesReservationForAnotherEngine() throws {
+        let store = CoordinatedRatingsFakeStore()
+        let a = try RatingsEngine(policy: policy(), store: store)
+        let b = try RatingsEngine(policy: policy(), store: store)
+
+        store.failWrites = true
+        XCTAssertThrowsError(try a.beginSession(now: now))
+        XCTAssertNil(try store.load())
+
+        store.failWrites = false
+        XCTAssertTrue(try b.beginSession(now: now))
+        XCTAssertEqual(try store.load()?.state.sessionCount, 1)
+    }
+
+    func testSimulatedProcessRestartAddsExactlyOneNewSession() throws {
+        let store = CoordinatedRatingsFakeStore()
+        let first = try RatingsEngine(policy: policy(), store: store)
+        let sameProcess = try RatingsEngine(policy: policy(), store: store)
+
+        XCTAssertTrue(try first.beginSession(now: now))
+        XCTAssertFalse(try sameProcess.beginSession(now: now))
+        XCTAssertEqual(try store.load()?.state.sessionCount, 1)
+
+        RatingsEngine.resetProcessReservationForTesting(store: store)
+
+        let nextProcessA = try RatingsEngine(policy: policy(), store: store)
+        let nextProcessB = try RatingsEngine(policy: policy(), store: store)
+        XCTAssertTrue(try nextProcessA.beginSession(now: now.addingTimeInterval(86_400)))
+        XCTAssertFalse(try nextProcessB.beginSession(now: now.addingTimeInterval(86_400)))
+        XCTAssertEqual(try store.load()?.state.sessionCount, 2)
+    }
+
     func testBereaTwoPreconstructedEnginesShareOneReservationAndKeepBothWins() throws {
         let store = CoordinatedRatingsFakeStore()
         let a = try RatingsEngine(policy: policy(), store: store,
