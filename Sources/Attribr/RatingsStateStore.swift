@@ -33,12 +33,40 @@ public protocol RatingsStateStore {
     func save(_ snapshot: RatingsStoreSnapshot) throws
 }
 
+/// A weakly held per-object token avoids memory-address reuse after a
+/// temporary store is released, which otherwise could suppress a later
+/// unrelated instance for the rest of the process. Tokens are NEVER sent
+/// through analytics or persisted.
+@MainActor
+private final class RatingsWeakStoreIdentity {
+    weak var storeObject: AnyObject?
+    let token = UUID().uuidString
+
+    init(_ storeObject: AnyObject) { self.storeObject = storeObject }
+}
+
+@MainActor
+private enum RatingsStoreIdentityRegistry {
+    private static var identities: [ObjectIdentifier: RatingsWeakStoreIdentity] = [:]
+
+    static func key(for object: AnyObject) -> String {
+        identities = identities.filter { $0.value.storeObject != nil }
+        let id = ObjectIdentifier(object)
+        if let current = identities[id], current.storeObject === object {
+            return "instance:" + current.token
+        }
+        let identity = RatingsWeakStoreIdentity(object)
+        identities[id] = identity
+        return "instance:" + identity.token
+    }
+}
+
 /// A default for existing reference-backed stores (including test doubles).
-/// An app-specific store with multiple handles for the same namespace must
-/// provide a shared key; the UserDefaults store does so below.
+/// App-specific stores that expose multiple handles to one namespace MUST
+/// override with a stable shared coordination key.
 public extension RatingsStateStore {
     var ratingsCoordinationKey: String {
-        "instance:\(ObjectIdentifier(self as AnyObject))"
+        RatingsStoreIdentityRegistry.key(for: self as AnyObject)
     }
 }
 
