@@ -51,6 +51,13 @@ public enum AppAccountTokenProvider {
     private static let keychainService = "com.mrvltechnologies.attribr.appAccountToken"
     private static let keychainAccount = "token"
 
+    /// When Keychain is unavailable, return one stable token for this
+    /// process only. Never claim it survives a relaunch or reinstall.
+    /// Access is serialised to avoid two simultaneous first callers issuing
+    /// different tokens. No UserDefaults downgrade is permitted.
+    private static let anonymousLock = NSLock()
+    nonisolated(unsafe) private static var transientAnonymousToken: UUID?
+
     /// Returns the stable appAccountToken to pass to
     /// `Product.PurchaseOption.appAccountToken(_:)`.
     ///
@@ -62,12 +69,24 @@ public enum AppAccountTokenProvider {
             if let parsed = UUID(uuidString: backendUserId) { return parsed }
             return deterministicUUID(from: backendUserId)
         }
-        if let existing = readKeychain(), let uuid = UUID(uuidString: existing) {
-            return uuid
+        return anonymousLock.withLock {
+            if let existing = readKeychain(), let uuid = UUID(uuidString: existing) {
+                transientAnonymousToken = nil
+                return uuid
+            }
+            if let transientAnonymousToken { return transientAnonymousToken }
+
+            let fresh = UUID()
+            let status = writeKeychain(fresh.uuidString)
+            if status == errSecSuccess, readKeychain() == fresh.uuidString {
+                return fresh
+            }
+            // Failed/unavailable persistence MUST NOT silently rotate the
+            // token between two calls in the same launch.
+            // It remains explicitly nonpersistent on future launches.
+            transientAnonymousToken = fresh
+            return fresh
         }
-        let fresh = UUID()
-        writeKeychain(fresh.uuidString)
-        return fresh
     }
 
     /// Clears the persisted anonymous-mode token. Call from your app's
@@ -75,7 +94,18 @@ public enum AppAccountTokenProvider {
     /// Has no effect in account-linked mode — nothing is persisted there,
     /// the token is re-derived from `backendUserId` every call.
     public static func reset() {
-        deleteKeychain()
+        anonymousLock.withLock {
+            transientAnonymousToken = nil
+            deleteKeychain()
+        }
+    }
+
+    /// Test-only seam: simulates a new process without deleting Keychain.
+    /// This is internal to the SDK and is not available to host consumers.
+    static func clearTransientCacheForTesting() {
+        anonymousLock.withLock {
+            transientAnonymousToken = nil
+        }
     }
 
     // MARK: - Deterministic UUID from an arbitrary backend id
@@ -122,12 +152,27 @@ public enum AppAccountTokenProvider {
         return String(data: data, encoding: .utf8)
     }
 
-    static func writeKeychain(_ value: String) {
-        deleteKeychain()
-        var query = baseQuery()
-        query[kSecValueData] = Data(value.utf8)
-        query[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
-        SecItemAdd(query as CFDictionary, nil)
+    /// Returns the actual Security framework write result. Do not delete
+    /// the old value first: if an update fails, the previous token remains
+    /// intact rather than disappearing before a failed insertion.
+    @discardableResult
+    static func writeKeychain(_ value: String) -> OSStatus {
+        let query = baseQuery()
+        let newValue = [kSecValueData: Data(value.utf8)]
+        let updated = SecItemUpdate(query as CFDictionary, newValue as CFDictionary)
+        if updated == errSecSuccess { return updated }
+        guard updated == errSecItemNotFound else { return updated }
+
+        var insert = query
+        insert[kSecValueData] = Data(value.utf8)
+        insert[kSecAttrAccessible] = kSecAttrAccessibleAfterFirstUnlock
+        let added = SecItemAdd(insert as CFDictionary, nil)
+        if added == errSecDuplicateItem {
+            // Another writer inserted the item between our query and add.
+            // Do not clobber it with this caller's fresh random token.
+            return errSecDuplicateItem
+        }
+        return added
     }
 
     static func deleteKeychain() {
