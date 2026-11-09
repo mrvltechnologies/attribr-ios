@@ -35,6 +35,12 @@ private enum RatingsLaunchReservations {
     static func insert(_ namespace: String) {
         reserved.insert(namespace)
     }
+
+    #if DEBUG
+    static func resetForSimulatedProcessRestart(_ namespace: String) {
+        reserved.remove(namespace)
+    }
+    #endif
 }
 
 /// Safe, product-owned local orchestration for ratings. No timers, StoreKit,
@@ -85,6 +91,14 @@ public final class RatingsEngine {
     public var state: RatingsLocalState {
         (try? currentSnapshot().state) ?? saved.state
     }
+
+    #if DEBUG
+    /// Test-only simulation of a process restart; NEVER used by a host app.
+    /// A genuine app relaunch naturally resets this process-local registry.
+    internal static func resetProcessReservationForTesting(store: any RatingsStateStore) {
+        RatingsLaunchReservations.resetForSimulatedProcessRestart(store.ratingsCoordinationKey)
+    }
+    #endif
 
     /// Reload before EVERY state mutation. The MainActor synchronously
     /// serialises the read/modify/write and the reservation ledger update
