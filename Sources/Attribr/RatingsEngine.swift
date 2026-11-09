@@ -19,6 +19,24 @@ public enum RatingsRequestResult: Equatable {
     case bridgeUnavailableAfterReservation
 }
 
+/// Process-local reservation ledger, keyed to the backing state namespace.
+/// This is not an arbitrary global enabled flag: it records a successful
+/// persisted native-request reservation for ONE namespace in THIS process.
+/// New processes start with an empty ledger; persisted cooldown/history
+/// remains authoritative across processes. All accesses are @MainActor.
+@MainActor
+private enum RatingsLaunchReservations {
+    private static var reserved = Set<String>()
+
+    static func contains(_ namespace: String) -> Bool {
+        reserved.contains(namespace)
+    }
+
+    static func insert(_ namespace: String) {
+        reserved.insert(namespace)
+    }
+}
+
 /// Safe, product-owned local orchestration for ratings. No timers, StoreKit,
 /// Attribr transport or network side effects exist in the engine.
 ///
@@ -32,6 +50,7 @@ public enum RatingsRequestResult: Equatable {
 @MainActor
 public final class RatingsEngine {
     private let store: any RatingsStateStore
+    private let coordinationKey: String
     public let policy: RatingsPolicy
     private let activeRequestsAuthorised: Bool
     private var saved: RatingsStoreSnapshot
@@ -49,6 +68,7 @@ public final class RatingsEngine {
         guard policy.isValid else { throw RatingsEngineError.invalidPolicy }
         self.policy = policy
         self.store = store
+        self.coordinationKey = store.ratingsCoordinationKey
         self.activeRequestsAuthorised = activeRequestsAuthorised
         let existing = try store.load()
         self.saved = existing ?? RatingsStoreSnapshot(
@@ -59,14 +79,57 @@ public final class RatingsEngine {
         self.saved.state.attemptedThisLaunch = false
     }
 
-    public var state: RatingsLocalState { saved.state }
+    /// Reflect successful writes from other engine instances without
+    /// throwing for this diagnostics-only accessor. Decisions and mutations
+    /// NEVER use the stale fallback on storage failure.
+    public var state: RatingsLocalState {
+        (try? currentSnapshot().state) ?? saved.state
+    }
+
+    /// Reload before EVERY state mutation. The MainActor synchronously
+    /// serialises the read/modify/write and the reservation ledger update
+    /// within this app process, including across distinct store handles.
+    /// An absent snapshot after our first successful write is corruption,
+    /// not permission to reset wins or a prior cooldown.
+    private func currentSnapshot() throws -> RatingsStoreSnapshot {
+        guard var current = try store.load() else {
+            guard canImportLegacy && !startedSession else {
+                throw RatingsStorageError.corruptSnapshot
+            }
+            return saved
+        }
+        // The current process's in-memory one-per-launch flag is not encoded
+        // into UserDefaults; keep our local flag when reading newer storage.
+        current.state.attemptedThisLaunch =
+            current.state.attemptedThisLaunch || saved.state.attemptedThisLaunch
+        return current
+    }
+
+    private func decision(
+        for current: RatingsStoreSnapshot,
+        opportunity: RatingsOpportunity
+    ) -> RatingsDecision {
+        let safeOpportunity = RatingsOpportunity(
+            now: opportunity.now,
+            isForeground: opportunity.isForeground,
+            isOnboarding: opportunity.isOnboarding,
+            isPaywallPresented: opportunity.isPaywallPresented,
+            isEditing: opportunity.isEditing,
+            nativeBridgeAvailable: opportunity.nativeBridgeAvailable,
+            hasConfirmedValueMoment:
+                opportunity.hasConfirmedValueMoment && confirmedValueThisSession
+        )
+        return RatingsEligibility.evaluate(
+            state: current.state, policy: policy, opportunity: safeOpportunity
+        )
+    }
 
     /// The first call in this process starts one session. Calls from repeated
     /// scene-active notifications do not inflate sessionCount.
     @discardableResult
     public func beginSession(now: Date = Date()) throws -> Bool {
         guard !startedSession else { return false }
-        var next = saved
+        var next = try currentSnapshot()
         if next.state.sessionCount < Int.max { next.state.sessionCount += 1 }
         if next.state.firstSeenAt == nil { next.state.firstSeenAt = now }
         try store.save(next)
@@ -94,6 +157,13 @@ public final class RatingsEngine {
             return false
         }
         guard confirmedWins >= 0 else { throw RatingsEngineError.legacyStateAlreadyInitialised }
+        // Another preconstructed engine may already have imported or
+        // initialised this namespace. NEVER replace its stored snapshot.
+        if let existing = try store.load() {
+            saved = existing
+            canImportLegacy = false
+            return false
+        }
         var next = saved
         next.state.confirmedWins = confirmedWins
         next.state.firstSeenAt = now
@@ -112,8 +182,9 @@ public final class RatingsEngine {
         _ moment: RatingsValueMoment
     ) throws -> Bool {
         guard startedSession else { throw RatingsEngineError.sessionNotStarted }
-        var next = saved
+        var next = try currentSnapshot()
         guard RatingsEligibility.recordConfirmedValueMoment(moment, into: &next.state) else {
+            saved = next // adopt the latest authoritative receipt/win state
             return false
         }
         // Persist first. Failed storage must never advance in-memory state.
@@ -133,7 +204,7 @@ public final class RatingsEngine {
     }
 
     private func mutate(_ edit: (inout RatingsStoreSnapshot) -> Void) throws {
-        var next = saved
+        var next = try currentSnapshot()
         edit(&next)
         try store.save(next)
         saved = next
@@ -143,18 +214,14 @@ public final class RatingsEngine {
     /// Returns a pure decision; never calls StoreKit. Use this for shadow
     /// comparisons and suppressed-reason diagnostics without telemetry.
     public func evaluate(_ opportunity: RatingsOpportunity) -> RatingsDecision {
-        let safeOpportunity = RatingsOpportunity(
-            now: opportunity.now,
-            isForeground: opportunity.isForeground,
-            isOnboarding: opportunity.isOnboarding,
-            isPaywallPresented: opportunity.isPaywallPresented,
-            isEditing: opportunity.isEditing,
-            nativeBridgeAvailable: opportunity.nativeBridgeAvailable,
-            hasConfirmedValueMoment: opportunity.hasConfirmedValueMoment && confirmedValueThisSession
-        )
-        return RatingsEligibility.evaluate(
-            state: saved.state, policy: policy, opportunity: safeOpportunity
-        )
+        guard let current = try? currentSnapshot() else {
+            // Keep the existing non-throwing API. A state read error must
+            // never report eligibility; requestIfEligible returns the more
+            // precise persistenceUnavailable result for the same failure.
+            return RatingsDecision(reason: .invalidPolicy,
+                                   configVersion: policy.version, mode: policy.mode)
+        }
+        return decision(for: current, opportunity: opportunity)
     }
 
     /// A safe, *synchronous* native handoff. In shadow mode the closure is
@@ -169,21 +236,33 @@ public final class RatingsEngine {
         nativeRequest: @MainActor () -> Bool
     ) -> RatingsRequestResult {
         guard startedSession else { return .suppressed(.unconfirmedValueMoment) }
-        let decision = evaluate(opportunity)
-        guard decision.isEligible else { return .suppressed(decision.reason) }
+        let current: RatingsStoreSnapshot
+        do {
+            current = try currentSnapshot()
+        } catch {
+            return .persistenceUnavailable
+        }
+        let eligibility = decision(for: current, opportunity: opportunity)
+        guard eligibility.isEligible else { return .suppressed(eligibility.reason) }
         guard policy.mode == .active else { return .shadowOnly }
         guard activeRequestsAuthorised else { return .activeNotAuthorised }
+        // Even a policy with zero cooldown cannot request twice in this
+        // process launch. Separate store objects for one namespace share
+        // this reservation identity, not their cached snapshot.
+        guard !RatingsLaunchReservations.contains(coordinationKey) else {
+            return .suppressed(.alreadyAttemptedThisLaunch)
+        }
 
         let now = opportunity.now
         // Never let a future-dated attempt bypass the annual throttle.
-        if saved.requestAttemptHistory.contains(where: { $0 > now }) {
+        if current.requestAttemptHistory.contains(where: { $0 > now }) {
             return .suppressed(.clockRollback)
         }
         let lookback = now.addingTimeInterval(-365 * 86_400)
-        let recent = saved.requestAttemptHistory.filter { $0 > lookback }
+        let recent = current.requestAttemptHistory.filter { $0 > lookback }
         guard recent.count < 3 else { return .annualAttemptLimit }
 
-        var next = saved
+        var next = current
         RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)
         next.requestAttemptHistory = Array((recent + [now]).sorted().suffix(8))
         do {
@@ -193,6 +272,7 @@ public final class RatingsEngine {
         }
         saved = next
         canImportLegacy = false
+        RatingsLaunchReservations.insert(coordinationKey)
         // No work between the saved guard and native call may suspend.
         let invoked = nativeRequest()
         return invoked ? .nativeRequestInvoked : .bridgeUnavailableAfterReservation
