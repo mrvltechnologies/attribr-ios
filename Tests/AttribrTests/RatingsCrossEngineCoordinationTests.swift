@@ -92,6 +92,46 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
         XCTAssertEqual(try storeB.load()?.state.sessionCount, 1)
     }
 
+    func testMinimumSessionsCannotBeSatisfiedByTwoEnginesInOneProcess() throws {
+        let p = RatingsPolicy(
+            version: "session-threshold-v1",
+            mode: .active,
+            minimumConfirmedWins: 1,
+            minimumSessions: 2,
+            cooldownDays: 0
+        )
+        let store = CoordinatedRatingsFakeStore()
+        let a = try RatingsEngine(policy: p, store: store, activeRequestsAuthorised: true)
+        let b = try RatingsEngine(policy: p, store: store, activeRequestsAuthorised: true)
+
+        XCTAssertTrue(try a.beginSession(now: now))
+        XCTAssertFalse(try b.beginSession(now: now))
+        XCTAssertTrue(try b.recordConfirmedValueMoment(
+            .init(receiptID: UUID(), strength: .strong, isConfirmed: true)))
+
+        var calls = 0
+        XCTAssertEqual(b.requestIfEligible(opportunity()) {
+            calls += 1
+            return true
+        }, .suppressed(.insufficientSessions))
+        XCTAssertEqual(calls, 0)
+        XCTAssertEqual(try store.load()?.state.sessionCount, 1)
+
+        RatingsEngine.resetProcessReservationForTesting(store: store)
+        let nextProcess = try RatingsEngine(
+            policy: p, store: store, activeRequestsAuthorised: true)
+        XCTAssertTrue(try nextProcess.beginSession(now: now.addingTimeInterval(86_400)))
+        XCTAssertTrue(try nextProcess.recordConfirmedValueMoment(
+            .init(receiptID: UUID(), strength: .strong, isConfirmed: true)))
+        XCTAssertEqual(nextProcess.requestIfEligible(
+            opportunity(now.addingTimeInterval(86_400))) {
+                calls += 1
+                return true
+            }, .nativeRequestInvoked)
+        XCTAssertEqual(calls, 1)
+        XCTAssertEqual(try store.load()?.state.sessionCount, 2)
+    }
+
     func testFailedSessionPersistenceReleasesReservationForAnotherEngine() throws {
         let store = CoordinatedRatingsFakeStore()
         let a = try RatingsEngine(policy: policy(), store: store)
