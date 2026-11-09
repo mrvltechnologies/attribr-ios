@@ -88,12 +88,16 @@ final class AppAccountTokenProviderTests: XCTestCase {
         // the in-process fallback was used. Prove persistence separately by
         // clearing the process cache, not by simply calling token() twice.
         guard let persisted = AppAccountTokenProvider.readKeychain() else {
+            // Re-test the operation to distinguish an unsupported Simulator
+            // environment from a genuine unexpected Security failure.
+            let status = AppAccountTokenProvider.writeKeychain(first.uuidString)
             #if targetEnvironment(simulator)
-            throw XCTSkip("Simulator Keychain was unavailable; cannot claim a persisted anonymous token")
-            #else
-            XCTFail("Keychain token was not persisted in this test environment")
-            return
+            if [errSecMissingEntitlement, errSecNotAvailable, errSecInteractionNotAllowed].contains(status) {
+                throw XCTSkip("Simulator Keychain unavailable: OSStatus \(status); persistence not proven")
+            }
             #endif
+            XCTFail("Anonymous token not persisted; Keychain OSStatus \(status)")
+            return
         }
         XCTAssertEqual(persisted, first.uuidString)
         AppAccountTokenProvider.clearTransientCacheForTesting()
