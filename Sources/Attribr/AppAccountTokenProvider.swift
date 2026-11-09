@@ -70,20 +70,23 @@ public enum AppAccountTokenProvider {
             return deterministicUUID(from: backendUserId)
         }
         return anonymousLock.withLock {
+            // If persistence failed earlier this launch, do not silently
+            // replace the token that may already have been used by StoreKit.
+            if let transientAnonymousToken { return transientAnonymousToken }
             if let existing = readKeychain(), let uuid = UUID(uuidString: existing) {
-                transientAnonymousToken = nil
                 return uuid
             }
-            if let transientAnonymousToken { return transientAnonymousToken }
 
             let fresh = UUID()
-            let status = writeKeychain(fresh.uuidString)
-            if status == errSecSuccess, readKeychain() == fresh.uuidString {
-                return fresh
+            _ = writeKeychain(fresh.uuidString)
+            // Read back the authoritative item, including a value inserted
+            // by another writer after our earlier missing-item query.
+            if let stored = readKeychain(), let uuid = UUID(uuidString: stored) {
+                return uuid
             }
-            // Failed/unavailable persistence MUST NOT silently rotate the
-            // token between two calls in the same launch.
-            // It remains explicitly nonpersistent on future launches.
+            // When Security storage is unavailable do not silently rotate
+            // within this launch. Reinstall/relaunch persistence is NOT
+            // claimed for this explicit in-memory-only fallback.
             transientAnonymousToken = fresh
             return fresh
         }
