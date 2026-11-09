@@ -44,6 +44,8 @@ MUTS=[
  ('P1 ignore stable userdefaults namespace key', ST, 'public var ratingsCoordinationKey: String { "userdefaults:" + key }', 'public var ratingsCoordinationKey: String { "userdefaults:" + UUID().uuidString }'),
  ('P1 failed read uses stale snapshot anyway', E, "            current = try currentSnapshot()\n        } catch {\n            return .persistenceUnavailable", "            current = try currentSnapshot()\n        } catch {\n            current = saved"),
  ('P1 stored launch flag trusted across launches', E, "        current.state.attemptedThisLaunch = saved.state.attemptedThisLaunch\n", "        current.state.attemptedThisLaunch = current.state.attemptedThisLaunch || saved.state.attemptedThisLaunch\n"),
+ ('P2 cross-engine session coordinator bypassed', E, "        switch RatingsLaunchReservations.beginSession(coordinationKey) {", "        switch RatingsSessionReservationResult.acquired {"),
+ ('P2 failed session write retains process reservation', E, "                RatingsLaunchReservations.abandonFailedSessionWrite(coordinationKey)\n                throw error", "                RatingsLaunchReservations.commitSession(coordinationKey)\n                throw error"),
 
 ]
 def run():
