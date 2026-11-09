@@ -16,7 +16,7 @@ MUTS=[
  ('clock rollback guard in engine removed', E, "if current.requestAttemptHistory.contains(where: { $0 > now }) {", "if false {"),
  ('clock rollback no longer blocks (eligibility)', L, "guard last <= opportunity.now else { return decision(.clockRollback) }", ""),
  ('legacy import resets the previous cooldown', E, "next.state.lastRequestAttemptAt = lastRequestAttemptAt\n        next.requestAttemptHistory", "next.state.lastRequestAttemptAt = nil\n        next.requestAttemptHistory"),
- ('legacy import may overwrite an initialised snapshot', E, "guard canImportLegacy, !startedSession, saved.state.sessionCount == 0,\n              saved.state.confirmedWins == 0,\n              saved.state.lastRequestAttemptAt == nil,\n              saved.requestAttemptHistory.isEmpty else {", "guard !startedSession else {"),
+ ('legacy import may overwrite an initialised snapshot', E, [("guard canImportLegacy, !startedSession, saved.state.sessionCount == 0,\n              saved.state.confirmedWins == 0,\n              saved.state.lastRequestAttemptAt == nil,\n              saved.requestAttemptHistory.isEmpty else {", "guard !startedSession else {"), ("        if let existing = try store.load() {\n            saved = existing\n            canImportLegacy = false\n            return false\n        }", "")]),
  ('background no longer suppresses the prompt', L, "guard opportunity.isForeground else { return decision(.background) }", ""),
  ('editing no longer suppresses the prompt', L, "guard !opportunity.isEditing else { return decision(.editing) }", ""),
  ('paywall no longer suppresses the prompt', L, "guard !opportunity.isPaywallPresented else { return decision(.paywall) }", ""),
