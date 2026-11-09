@@ -49,13 +49,15 @@ final class DeviceIdentifierTests: XCTestCase {
 
     func testHashUsesKnownAlgorithm() {
         // Verify against a known SHA-256 value to confirm algorithm hasn't changed.
-        // On the test host (macOS, no UIKit), IDFV = "test-idfv-placeholder"
-        // and bundle = the test bundle identifier.
+        // Inject the known input directly instead of relying on macOS's
+        // placeholder or an iOS host's real identifierForVendor. The
+        // algorithm oracle must be independent of platform and device.
+        let knownIDFV = "test-idfv-placeholder"
         let bundle = Bundle.main.bundleIdentifier ?? "unknown"
-        let raw = "test-idfv-placeholder:\(bundle):attribr.mrvl.2026"
+        let raw = "\(knownIDFV):\(bundle):attribr.mrvl.2026"
         let digest = SHA256.hash(data: Data(raw.utf8))
         let expected = digest.compactMap { String(format: "%02x", $0) }.joined()
-        XCTAssertEqual(DeviceIdentifier.computeHash(), expected)
+        XCTAssertEqual(DeviceIdentifier.computeHash(idfv: knownIDFV), expected)
     }
 
     func testInstanceCachesHash() {
