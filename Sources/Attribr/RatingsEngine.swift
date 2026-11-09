@@ -24,12 +24,19 @@ public enum RatingsRequestResult: Equatable {
 /// persisted native-request reservation for ONE namespace in THIS process.
 /// New processes start with an empty ledger; persisted cooldown/history
 /// remains authoritative across processes. All accesses are @MainActor.
+private enum RatingsSessionReservationResult {
+    case acquired
+    case alreadyStarted
+    case pending
+}
+
 @MainActor
 private enum RatingsLaunchReservations {
     /// A pending reservation prevents synchronous reentrancy from a custom
     /// state store's save callback; only a successful save can commit it.
     private enum Status { case pending, committed }
     private static var reservations: [String: Status] = [:]
+    private static var sessions: [String: Status] = [:]
 
     static func begin(_ namespace: String) -> Bool {
         guard reservations[namespace] == nil else { return false }
@@ -49,9 +56,34 @@ private enum RatingsLaunchReservations {
         }
     }
 
+    static func beginSession(_ namespace: String) -> RatingsSessionReservationResult {
+        switch sessions[namespace] {
+        case nil:
+            sessions[namespace] = .pending
+            return .acquired
+        case .committed:
+            return .alreadyStarted
+        case .pending:
+            return .pending
+        }
+    }
+
+    static func commitSession(_ namespace: String) {
+        if sessions[namespace] == .pending {
+            sessions[namespace] = .committed
+        }
+    }
+
+    static func abandonFailedSessionWrite(_ namespace: String) {
+        if sessions[namespace] == .pending {
+            sessions.removeValue(forKey: namespace)
+        }
+    }
+
     // Internal-only test support; never surfaced in the public SDK API.
     static func resetForSimulatedProcessRestart(_ namespace: String) {
         reservations.removeValue(forKey: namespace)
+        sessions.removeValue(forKey: namespace)
     }
 }
 
@@ -151,19 +183,49 @@ public final class RatingsEngine {
         )
     }
 
-    /// The first call in this process starts one session. Calls from repeated
-    /// scene-active notifications do not inflate sessionCount.
+    /// The first call for this state namespace in this process starts one
+    /// persisted session. Additional engine instances join that same process
+    /// session without incrementing sessionCount again.
     @discardableResult
     public func beginSession(now: Date = Date()) throws -> Bool {
         guard !startedSession else { return false }
-        var next = try currentSnapshot()
-        if next.state.sessionCount < Int.max { next.state.sessionCount += 1 }
-        if next.state.firstSeenAt == nil { next.state.firstSeenAt = now }
-        try store.save(next)
-        saved = next
-        canImportLegacy = false
-        startedSession = true
-        return true
+
+        switch RatingsLaunchReservations.beginSession(coordinationKey) {
+        case .alreadyStarted:
+            // Another engine already persisted this process session. Adopt the
+            // authoritative state so this engine can record value moments
+            // without inflating minimumSessions eligibility.
+            guard var current = try store.load() else {
+                throw RatingsStorageError.corruptSnapshot
+            }
+            current.state.attemptedThisLaunch = saved.state.attemptedThisLaunch
+            saved = current
+            canImportLegacy = false
+            startedSession = true
+            return false
+
+        case .pending:
+            // A synchronous/reentrant session write is still in flight.
+            // Fail closed for this engine; a later call can retry after the
+            // owning write either commits or abandons the reservation.
+            return false
+
+        case .acquired:
+            do {
+                var next = try currentSnapshot()
+                if next.state.sessionCount < Int.max { next.state.sessionCount += 1 }
+                if next.state.firstSeenAt == nil { next.state.firstSeenAt = now }
+                try store.save(next)
+                saved = next
+                canImportLegacy = false
+                startedSession = true
+                RatingsLaunchReservations.commitSession(coordinationKey)
+                return true
+            } catch {
+                RatingsLaunchReservations.abandonFailedSessionWrite(coordinationKey)
+                throw error
+            }
+        }
     }
 
     /// Used once during an approved migration from an existing product's
