@@ -11,9 +11,9 @@ MUTS=[
  ('shadow bypass: shadow mode may invoke the native bridge', E, "guard policy.mode == .active else { return .shadowOnly }", ""),
  ('active request without separate host authorisation', E, "guard activeRequestsAuthorised else { return .activeNotAuthorised }", ""),
  ('failed storage still invokes the native bridge', E, "} catch {\n            return .persistenceUnavailable\n        }", "} catch {\n        }"),
- ('native bridge invoked BEFORE the reservation is saved', E, "        var next = saved\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)", "        _ = nativeRequest()\n        var next = saved\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)"),
+ ('native bridge invoked BEFORE the reservation is saved', E, "        var next = current\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)", "        _ = nativeRequest()\n        var next = current\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)"),
  ('annual cap removed (3 attempts / 365 days)', E, "guard recent.count < 3 else { return .annualAttemptLimit }", ""),
- ('clock rollback guard in engine removed', E, "if saved.requestAttemptHistory.contains(where: { $0 > now }) {", "if false {"),
+ ('clock rollback guard in engine removed', E, "if current.requestAttemptHistory.contains(where: { $0 > now }) {", "if false {"),
  ('clock rollback no longer blocks (eligibility)', L, "guard last <= opportunity.now else { return decision(.clockRollback) }", ""),
  ('legacy import resets the previous cooldown', E, "next.state.lastRequestAttemptAt = lastRequestAttemptAt\n        next.requestAttemptHistory", "next.state.lastRequestAttemptAt = nil\n        next.requestAttemptHistory"),
  ('legacy import may overwrite an initialised snapshot', E, "guard canImportLegacy, !startedSession, saved.state.sessionCount == 0,\n              saved.state.confirmedWins == 0,\n              saved.state.lastRequestAttemptAt == nil,\n              saved.requestAttemptHistory.isEmpty else {", "guard !startedSession else {"),
@@ -33,6 +33,14 @@ MUTS=[
  ('cancellation ignored: cancelled scheduled opportunity still fires', S, [("guard self != nil, !Task.isCancelled else { return }", "guard self != nil else { return }"), ("} catch {\n                return\n            }", "} catch {\n            }")]),
  ('repeated scheduling stacks instead of replacing', S, "        cancel()\n        // Even a misconfigured", "        // Even a misconfigured"),
  ('session counted on every call (inflated sessions)', E, "guard !startedSession else { return false }", ""),
+ ('P1 cross-engine reservation guard removed', E, "guard !RatingsLaunchReservations.contains(coordinationKey) else {\n            return .suppressed(.alreadyAttemptedThisLaunch)\n        }", ""),
+ ('P1 read stale cached snapshot before request', E, "            current = try currentSnapshot()\n        } catch {\n            return .persistenceUnavailable", "            current = saved\n        } catch {\n            return .persistenceUnavailable"),
+ ('P1 request reservation overwrites newer wins', E, "        var next = current\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)", "        var next = saved\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)"),
+ ('P1 stale confirmed win overwrites receipts', E, "        var next = try currentSnapshot()\n        guard RatingsEligibility.recordConfirmedValueMoment", "        var next = saved\n        guard RatingsEligibility.recordConfirmedValueMoment"),
+ ('P1 stale failure or crash write overwrites state', E, "    private func mutate(_ edit: (inout RatingsStoreSnapshot) -> Void) throws {\n        var next = try currentSnapshot()", "    private func mutate(_ edit: (inout RatingsStoreSnapshot) -> Void) throws {\n        var next = saved"),
+ ('P1 ignore stable userdefaults namespace key', ST, 'public var ratingsCoordinationKey: String { "userdefaults:" + key }', 'public var ratingsCoordinationKey: String { "userdefaults:" + UUID().uuidString }'),
+ ('P1 failed read uses stale snapshot anyway', E, "            current = try currentSnapshot()\n        } catch {\n            return .persistenceUnavailable", "            current = try currentSnapshot()\n        } catch {\n            current = saved"),
+
 ]
 def run():
     r=subprocess.run(['swift','test','--filter','Ratings'],capture_output=True,text=True)
