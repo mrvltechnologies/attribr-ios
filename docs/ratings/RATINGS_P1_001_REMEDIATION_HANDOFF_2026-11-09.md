@@ -36,7 +36,7 @@ Two RatingsEngine objects instantiated before either attempted a review could ea
 
 A previously invalid failing-store test double was repaired to actually reload its successful writes, rather than return nil permanently.
 
-The existing 50 Ratings tests remain in the branch. Two earlier baseline SDK Simulator failures remain separate; `DeviceIdentifierTests.testHashUsesKnownAlgorithm` now tests `computeHash(idfv: knownIDFV)` with an explicit platform-independent input. The AppAccountTokenProvider Keychain/unentitled Simulator issue has NOT been fixed and should not be misreported as green.
+The existing 50 Ratings tests remain in the branch. Two earlier baseline SDK Simulator failures remain separate; `DeviceIdentifierTests.testHashUsesKnownAlgorithm` now tests `computeHash(idfv: knownIDFV)` with an explicit platform-independent input. The AppAccountTokenProvider Keychain/unentitled Simulator issue has now received a narrowly scoped source hardening and test correction; it is **NOT YET MACOS/iOS-EXECUTED** and must not be misreported as green.
 
 ## 4. Mutation protection
 
@@ -81,6 +81,21 @@ The new real-SDK tests were authored on GitHub. Linux in this chat does not have
 - No main merge, SDK tag, publication, prod submodule change, Cleanr edit/deploy, TestFlight/App Store upload or paid CI.
 - No ratings telemetry; Cleanr's unconditional `Attribr.setConsent(.granted)` is NOT a valid app-level approval for new Ratings analytics.
 - Cleanr Customer 0 shadow integration remains Berea's CONDITIONAL PASS; no active StoreKit cutover.
-- Keychain persistence issue, two historical Simulator failures (one now has a deterministic test correction), iOS physical device, UserDefaults crash durability and release-provenance clean-clone proof remain unverified.
+- Keychain persistence and the two historical Simulator failures (both now have source/test corrections, neither re-executed), iOS physical device, UserDefaults crash durability and release-provenance clean-clone proof remain unverified.
 
 **Final gate: NOT READY FOR BEREA RE-VERIFICATION — full real-SDK macOS/iOS tests and all 35 mutation runs have not yet been executed against the new source SHA.**
+
+## 9. Additional source-level reliability hardening before Claude handoff
+
+The P2-004 anonymous StoreKit account-token issue was also inspected and received a **small, separate SDK source correction**, not a change to the Ratings Engine contract:
+
+- `Sources/Attribr/AppAccountTokenProvider.swift` now checks Security framework write status; updates an existing Keychain token in place rather than deleting it before a potentially failing insertion; reads back the actual stored UUID; serialises anonymous token acquisition with `NSLock`; and preserves one **in-memory-only** anonymous token for repeated calls if Keychain is unavailable. No UserDefaults fallback was added. A token returned in this exceptional path is **not guaranteed to survive an app relaunch or reinstall**, so a host must not treat this path as proof of refund-identity durability.
+- `Tests/AttribrTests/AppAccountTokenProviderTests.swift` now separately checks repeated-call stability, actual persisted Keychain readback across a simulated new-process cache reset, and an observable `OSStatus` from the write helper. Only recognised Simulator-specific Security errors permit an explicit SKIP; unexpected write failures remain failures.
+- This is **source authored, not compiled or executed** in this Linux environment. The previously red Simulator test must be independently run on a suitable entitled test host. A passing/appropriately skipped test must state whether Keychain durability is actually proved.
+- The `DeviceIdentifierTests.testHashUsesKnownAlgorithm` test fix (known IDFV input) is also not yet executed under iOS.
+
+These P2 changes should be reviewed independently of the P1 multi-engine fix, and must not be misreported as a green baseline before macOS/iOS testing.
+
+## 10. Latest source checkpoint
+
+Use **the latest branch HEAD**, not the original Ratings source SHA, for Claude's macOS verification. As of this document, no complete SDK package checkout, full new Ratings XCTest run, iOS Simulator execution, full mutation sweep or GitHub Actions verification has been performed in the present session. The branch is **NOT READY FOR BEREA RE-VERIFICATION** until those gates pass.
