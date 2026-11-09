@@ -249,11 +249,13 @@ final class RatingsDuplicatePromptTests: XCTestCase {
 
     func testFailedPersistenceNeverInvokesTheNativeBridge() {
         final class FailingStore: RatingsStateStore {
-            nonisolated(unsafe) var allowSaves = 2   // session + value moment succeed; the request reservation fails
-            func load() throws -> RatingsStoreSnapshot? { nil }
+            var snapshot: RatingsStoreSnapshot?
+            var allowSaves = 2 // session + value moment succeed, reservation fails
+            func load() throws -> RatingsStoreSnapshot? { snapshot }
             func save(_ value: RatingsStoreSnapshot) throws {
                 guard allowSaves > 0 else { throw RatingsStorageError.writeFailed }
                 allowSaves -= 1
+                snapshot = value
             }
         }
         let e = try! RatingsEngine(policy: active, store: FailingStore(), activeRequestsAuthorised: true)
