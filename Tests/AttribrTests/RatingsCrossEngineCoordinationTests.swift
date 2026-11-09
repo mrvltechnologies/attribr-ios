@@ -10,6 +10,7 @@ private final class CoordinatedRatingsFakeStore: RatingsStateStore {
     var failWrites = false
     var failReads = false
     var writes = 0
+    var onSave: (() -> Void)?
 
     func load() throws -> RatingsStoreSnapshot? {
         if failReads { throw RatingsStorageError.corruptSnapshot }
@@ -20,6 +21,7 @@ private final class CoordinatedRatingsFakeStore: RatingsStateStore {
         if failWrites { throw RatingsStorageError.writeFailed }
         snapshot = next
         writes += 1
+        onSave?()
     }
 }
 
@@ -182,6 +184,32 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
         }, .nativeRequestInvoked)
         XCTAssertEqual(nativeCalls, 1)
         XCTAssertEqual(try store.load()?.state.confirmedWins, 2)
+    }
+
+    func testReentrantStoreSaveCannotCauseSecondNativeInvocation() throws {
+        let store = CoordinatedRatingsFakeStore()
+        let a = try RatingsEngine(policy: policy(cooldown: 0), store: store,
+                                  activeRequestsAuthorised: true)
+        let b = try RatingsEngine(policy: policy(cooldown: 0), store: store,
+                                  activeRequestsAuthorised: true)
+        try prepare(a)
+        try prepare(b)
+        var calls = 0
+        var attemptedReentry = false
+        store.onSave = {
+            guard !attemptedReentry else { return }
+            attemptedReentry = true
+            let result = b.requestIfEligible(opportunity()) {
+                calls += 1; return true
+            }
+            XCTAssertEqual(result, .suppressed(.alreadyAttemptedThisLaunch))
+        }
+        XCTAssertEqual(a.requestIfEligible(opportunity()) {
+            calls += 1; return true
+        }, .nativeRequestInvoked)
+        XCTAssertTrue(attemptedReentry)
+        XCTAssertEqual(calls, 1)
+        XCTAssertEqual(try store.load()?.requestAttemptHistory.count, 1)
     }
 
     func testReadFailureFailsClosedWithoutNativeCallOrStateReplacement() throws {
