@@ -10,7 +10,7 @@ T='Sources/Attribr/RatingsTelemetryContract.swift'; ST='Sources/Attribr/RatingsS
 MUTS=[
  ('shadow bypass: shadow mode may invoke the native bridge', E, "guard policy.mode == .active else { return .shadowOnly }", ""),
  ('active request without separate host authorisation', E, "guard activeRequestsAuthorised else { return .activeNotAuthorised }", ""),
- ('failed storage still invokes the native bridge', E, "} catch {\n            return .persistenceUnavailable\n        }", "} catch {\n        }"),
+ ('failed storage still invokes the native bridge', E, "        do {\n            try store.save(next)\n        } catch {\n            return .persistenceUnavailable\n        }", "        do {\n            try store.save(next)\n        } catch {\n            // MUTANT: proceed despite failed reservation persistence\n        }"),
  ('native bridge invoked BEFORE the reservation is saved', E, "        var next = current\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)", "        _ = nativeRequest()\n        var next = current\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)"),
  ('annual cap removed (3 attempts / 365 days)', E, "guard recent.count < 3 else { return .annualAttemptLimit }", ""),
  ('clock rollback guard in engine removed', E, "if current.requestAttemptHistory.contains(where: { $0 > now }) {", "if false {"),
@@ -34,6 +34,8 @@ MUTS=[
  ('repeated scheduling stacks instead of replacing', S, "        cancel()\n        // Even a misconfigured", "        // Even a misconfigured"),
  ('session counted on every call (inflated sessions)', E, "guard !startedSession else { return false }", ""),
  ('P1 cross-engine reservation guard removed', E, "guard !RatingsLaunchReservations.contains(coordinationKey) else {\n            return .suppressed(.alreadyAttemptedThisLaunch)\n        }", ""),
+ ('P1 cross-engine reservation never entered after successful save', E, "        RatingsLaunchReservations.insert(coordinationKey)\n        // No work between", "        // No work between"),
+ ('P1 session state overwritten by a preconstructed engine', E, "        guard !startedSession else { return false }\n        var next = try currentSnapshot()", "        guard !startedSession else { return false }\n        var next = saved"),
  ('P1 read stale cached snapshot before request', E, "            current = try currentSnapshot()\n        } catch {\n            return .persistenceUnavailable", "            current = saved\n        } catch {\n            return .persistenceUnavailable"),
  ('P1 request reservation overwrites newer wins', E, "        var next = current\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)", "        var next = saved\n        RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)"),
  ('P1 stale confirmed win overwrites receipts', E, "        var next = try currentSnapshot()\n        guard RatingsEligibility.recordConfirmedValueMoment", "        var next = saved\n        guard RatingsEligibility.recordConfirmedValueMoment"),
