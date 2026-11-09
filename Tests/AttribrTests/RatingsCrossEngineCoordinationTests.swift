@@ -237,7 +237,9 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
         XCTAssertEqual(saved.state.lastRequestAttemptAt, now)
         XCTAssertEqual(saved.requestAttemptHistory, [now])
         XCTAssertNotNil(saved.state.firstSeenAt)
-        XCTAssertGreaterThanOrEqual(saved.state.sessionCount, 2)
+        // Two engines in one process share ONE persisted session (process-scoped
+        // session coordination, 5a3b0c9); it must not be inflated to 2.
+        XCTAssertEqual(saved.state.sessionCount, 1)
     }
 
     func testZeroDayCooldownStillAllowsOnlyOneRequestPerLaunch() throws {
@@ -406,5 +408,32 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
         try b.recordConfirmedValueMoment(
             .init(receiptID: UUID(), strength: .standard, isConfirmed: true))
         XCTAssertEqual(b.requestIfEligible(opportunity()) { true }, .nativeRequestInvoked)
+    }
+
+    /// A mutation (noteFailure/noteCrash need no session) by engine A before engine B
+    /// starts the process session must survive B's session write: B must reload, not
+    /// write back its stale construction-time snapshot.
+    func testSessionStartDoesNotOverwriteAnotherEnginesEarlierWrite() throws {
+        let store = CoordinatedRatingsFakeStore()
+        let a = try RatingsEngine(policy: policy(), store: store, activeRequestsAuthorised: true)
+        let b = try RatingsEngine(policy: policy(), store: store, activeRequestsAuthorised: true)
+        let failure = now.addingTimeInterval(-3600)
+        try a.noteFailure(at: failure)
+        try b.beginSession(now: now)
+        let saved = try XCTUnwrap(store.load())
+        XCTAssertEqual(saved.state.lastFailureAt, failure)
+        XCTAssertEqual(saved.state.sessionCount, 1)
+    }
+
+    /// A second engine in the same process, and a repeated call, must not inflate sessions.
+    func testSessionIsCountedOncePerProcessAcrossEnginesAndRepeatedCalls() throws {
+        let store = CoordinatedRatingsFakeStore()
+        let a = try RatingsEngine(policy: policy(), store: store, activeRequestsAuthorised: true)
+        let b = try RatingsEngine(policy: policy(), store: store, activeRequestsAuthorised: true)
+        XCTAssertTrue(try a.beginSession(now: now))
+        XCTAssertFalse(try a.beginSession(now: now))
+        XCTAssertFalse(try b.beginSession(now: now))
+        XCTAssertFalse(try b.beginSession(now: now))
+        XCTAssertEqual(try store.load()?.state.sessionCount, 1)
     }
 }
