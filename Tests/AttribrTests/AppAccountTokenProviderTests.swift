@@ -14,6 +14,7 @@
 //     deletion request) so the next call produces a new one.
 
 import XCTest
+import Security
 @testable import Attribr
 
 final class AppAccountTokenProviderTests: XCTestCase {
@@ -78,10 +79,51 @@ final class AppAccountTokenProviderTests: XCTestCase {
 
     // MARK: - Anonymous mode (Keychain-persisted)
 
-    func test_anonymousMode_generatesAndPersistsAcrossCalls() {
+    func test_anonymousMode_generatesAndPersistsAcrossCalls() throws {
         let first = AppAccountTokenProvider.token()
         let second = AppAccountTokenProvider.token()
-        XCTAssertEqual(first, second, "must be stable across repeated calls, simulating separate app launches")
+        XCTAssertEqual(first, second, "same-process calls must never rotate the token")
+
+        // A repeated call can pass even when Keychain writes failed and only
+        // the in-process fallback was used. Prove persistence separately by
+        // clearing the process cache, not by simply calling token() twice.
+        guard let persisted = AppAccountTokenProvider.readKeychain() else {
+            #if targetEnvironment(simulator)
+            throw XCTSkip("Simulator Keychain was unavailable; cannot claim a persisted anonymous token")
+            #else
+            XCTFail("Keychain token was not persisted in this test environment")
+            return
+            #endif
+        }
+        XCTAssertEqual(persisted, first.uuidString)
+        AppAccountTokenProvider.clearTransientCacheForTesting()
+        XCTAssertEqual(AppAccountTokenProvider.token(), first,
+                       "a simulated new process must recover the same persisted token")
+    }
+
+    func test_anonymousMode_isStableWithinProcessEvenWithoutRelianceOnPersistence() {
+        let first = AppAccountTokenProvider.token()
+        for _ in 0..<10 {
+            XCTAssertEqual(AppAccountTokenProvider.token(), first,
+                           "parallel or repeated client calls must not silently rotate token")
+        }
+    }
+
+    func test_KeychainWriteResultIsObservableAndReadBackMatches() throws {
+        let value = UUID().uuidString
+        let status = AppAccountTokenProvider.writeKeychain(value)
+        guard status == errSecSuccess else {
+            #if targetEnvironment(simulator)
+            if [errSecMissingEntitlement, errSecNotAvailable, errSecInteractionNotAllowed].contains(status) {
+                throw XCTSkip("Simulator Keychain environment unavailable: OSStatus \(status)")
+            }
+            #endif
+            XCTFail("Unexpected Keychain failure: OSStatus \(status)")
+            return
+        }
+        XCTAssertEqual(AppAccountTokenProvider.readKeychain(), value)
+        AppAccountTokenProvider.clearTransientCacheForTesting()
+        XCTAssertEqual(AppAccountTokenProvider.token().uuidString, value)
     }
 
     func test_anonymousMode_reset_producesAFreshToken() {
