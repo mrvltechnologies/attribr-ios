@@ -5,6 +5,7 @@ import XCTest
 /// without re-checking consent, and re-queued after withdrawal. These observe requests at the URLSession boundary.
 /// They do not prove wire silence on a device; a request already on the wire cannot be recalled.
 @MainActor
+@available(iOS 16.0, macOS 13.0, *)
 final class RevenueDiscoveryConsentTests: XCTestCase {
     private let consentKey = "com.mrvltechnologies.attribr.consent"
     private let queueKey = "com.mrvltechnologies.attribr.queue"
