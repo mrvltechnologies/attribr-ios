@@ -179,6 +179,9 @@ final class RatingsEngineTests: XCTestCase {
             receiptID: UUID(), strength: .standard, isConfirmed: true))
         XCTAssertEqual(first.requestIfEligible(opportunity(now)) { true },
                        .nativeRequestInvoked)
+        // Simulate a genuine process relaunch. Constructing another engine
+        // in the same process must not count as a new session.
+        RatingsEngine.resetProcessReservationForTesting(store: store)
         let second = try! RatingsEngine(
             policy: activePolicy(), store: store, activeRequestsAuthorised: true)
         try! second.beginSession(now: now.addingTimeInterval(86_400))
