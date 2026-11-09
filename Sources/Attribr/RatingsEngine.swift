@@ -26,19 +26,32 @@ public enum RatingsRequestResult: Equatable {
 /// remains authoritative across processes. All accesses are @MainActor.
 @MainActor
 private enum RatingsLaunchReservations {
-    private static var reserved = Set<String>()
+    /// A pending reservation prevents synchronous reentrancy from a custom
+    /// state store's save callback; only a successful save can commit it.
+    private enum Status { case pending, committed }
+    private static var reservations: [String: Status] = [:]
 
-    static func contains(_ namespace: String) -> Bool {
-        reserved.contains(namespace)
+    static func begin(_ namespace: String) -> Bool {
+        guard reservations[namespace] == nil else { return false }
+        reservations[namespace] = .pending
+        return true
     }
 
-    static func insert(_ namespace: String) {
-        reserved.insert(namespace)
+    static func commit(_ namespace: String) {
+        if reservations[namespace] == .pending {
+            reservations[namespace] = .committed
+        }
+    }
+
+    static func abandonFailedWrite(_ namespace: String) {
+        if reservations[namespace] == .pending {
+            reservations.removeValue(forKey: namespace)
+        }
     }
 
     #if DEBUG
     static func resetForSimulatedProcessRestart(_ namespace: String) {
-        reserved.remove(namespace)
+        reservations.removeValue(forKey: namespace)
     }
     #endif
 }
@@ -260,13 +273,6 @@ public final class RatingsEngine {
         guard eligibility.isEligible else { return .suppressed(eligibility.reason) }
         guard policy.mode == .active else { return .shadowOnly }
         guard activeRequestsAuthorised else { return .activeNotAuthorised }
-        // Even a policy with zero cooldown cannot request twice in this
-        // process launch. Separate store objects for one namespace share
-        // this reservation identity, not their cached snapshot.
-        guard !RatingsLaunchReservations.contains(coordinationKey) else {
-            return .suppressed(.alreadyAttemptedThisLaunch)
-        }
-
         let now = opportunity.now
         // Never let a future-dated attempt bypass the annual throttle.
         if current.requestAttemptHistory.contains(where: { $0 > now }) {
@@ -279,14 +285,20 @@ public final class RatingsEngine {
         var next = current
         RatingsEligibility.markNativeRequestAttempt(in: &next.state, at: now)
         next.requestAttemptHistory = Array((recent + [now]).sorted().suffix(8))
+        // Reserve the namespace BEFORE calling a potentially reentrant store.
+        // No StoreKit call occurs unless the reservation is persisted.
+        guard RatingsLaunchReservations.begin(coordinationKey) else {
+            return .suppressed(.alreadyAttemptedThisLaunch)
+        }
         do {
             try store.save(next)
         } catch {
+            RatingsLaunchReservations.abandonFailedWrite(coordinationKey)
             return .persistenceUnavailable
         }
         saved = next
         canImportLegacy = false
-        RatingsLaunchReservations.insert(coordinationKey)
+        RatingsLaunchReservations.commit(coordinationKey)
         // No work between the saved guard and native call may suspend.
         let invoked = nativeRequest()
         return invoked ? .nativeRequestInvoked : .bridgeUnavailableAfterReservation
