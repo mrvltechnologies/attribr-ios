@@ -1,0 +1,32 @@
+# Smallest hosted-test harness for StoreKit lifecycle QA (StoreKitTest needs an app host; `swift test`
+# alone returns `notEntitled`). Runs entirely against StoreKit testing — no network, no production data:
+# a capturing URLProtocol intercepts the revenue-discovery request.
+#   xcodegen generate && xcodebuild test -project AttribrStoreKitHarness.xcodeproj \
+#     -scheme AttribrStoreKitHarness -destination 'platform=iOS Simulator,name=iPhone 16 Pro'
+name: AttribrStoreKitHarness
+options: { bundleIdPrefix: com.mrvltechnologies.qa, deploymentTarget: { iOS: "16.0" } }
+packages:
+  Attribr: { path: ../.. }
+targets:
+  HarnessApp:
+    type: application
+    platform: iOS
+    sources: [App]
+    dependencies: [ { package: Attribr } ]
+    settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: com.mrvltechnologies.qa.attribrharness, GENERATE_INFOPLIST_FILE: YES, SWIFT_VERSION: "6.0", INFOPLIST_KEY_UILaunchScreen_Generation: YES } }
+  HarnessTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: ../../Tests/AttribrTests/RevenueDiscoveryLifecycleTests.swift
+      - path: Lifecycle.storekit
+        buildPhase: resources
+    dependencies: [ { target: HarnessApp }, { package: Attribr } ]
+    settings: { base: { PRODUCT_BUNDLE_IDENTIFIER: com.mrvltechnologies.qa.attribrharness.tests, GENERATE_INFOPLIST_FILE: YES, SWIFT_VERSION: "6.0", ENABLE_TESTABILITY: YES, TEST_HOST: "$(BUILT_PRODUCTS_DIR)/HarnessApp.app/HarnessApp", BUNDLE_LOADER: "$(TEST_HOST)" } }
+schemes:
+  AttribrStoreKitHarness:
+    build: { targets: { HarnessApp: all, HarnessTests: [test] } }
+    run:
+      storeKitConfiguration: Lifecycle.storekit
+    test:
+      targets: [HarnessTests]

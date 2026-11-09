@@ -237,7 +237,9 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
         XCTAssertEqual(saved.state.lastRequestAttemptAt, now)
         XCTAssertEqual(saved.requestAttemptHistory, [now])
         XCTAssertNotNil(saved.state.firstSeenAt)
-        XCTAssertGreaterThanOrEqual(saved.state.sessionCount, 2)
+        // Two engines in one process share ONE persisted session (process-scoped
+        // session coordination, 5a3b0c9); it must not be inflated to 2.
+        XCTAssertEqual(saved.state.sessionCount, 1)
     }
 
     func testZeroDayCooldownStillAllowsOnlyOneRequestPerLaunch() throws {
