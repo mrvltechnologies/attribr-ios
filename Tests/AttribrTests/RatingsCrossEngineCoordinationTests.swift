@@ -9,6 +9,7 @@ private final class CoordinatedRatingsFakeStore: RatingsStateStore {
     var snapshot: RatingsStoreSnapshot?
     var failWrites = false
     var failReads = false
+    var persistLaunchFlag = false
     var writes = 0
     var onSave: (() -> Void)?
 
@@ -17,9 +18,18 @@ private final class CoordinatedRatingsFakeStore: RatingsStateStore {
         return snapshot
     }
 
+    // Production stores (RatingsUserDefaultsStore) NEVER persist
+    // attemptedThisLaunch; it is process memory only. The double must match,
+    // otherwise cross-engine/restart tests pass or fail for the wrong reason.
+    private func normalised(_ s: RatingsStoreSnapshot) -> RatingsStoreSnapshot {
+        var c = s
+        c.state.attemptedThisLaunch = false
+        return c
+    }
+
     func save(_ next: RatingsStoreSnapshot) throws {
         if failWrites { throw RatingsStorageError.writeFailed }
-        snapshot = next
+        snapshot = persistLaunchFlag ? next : normalised(next)
         writes += 1
         onSave?()
     }
@@ -199,7 +209,7 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
         store.onSave = {
             guard !attemptedReentry else { return }
             attemptedReentry = true
-            let result = b.requestIfEligible(opportunity()) {
+            let result = b.requestIfEligible(self.opportunity()) {
                 calls += 1; return true
             }
             XCTAssertEqual(result, .suppressed(.alreadyAttemptedThisLaunch))
@@ -267,5 +277,25 @@ final class RatingsCrossEngineCoordinationTests: XCTestCase {
         XCTAssertEqual(c.requestIfEligible(opportunity(later)) { true },
                        .nativeRequestInvoked)
         XCTAssertEqual(try store.load()?.requestAttemptHistory.count, 2)
+    }
+
+    /// A custom store that (wrongly for a launch flag, but legally) persists the
+    /// entire snapshot including attemptedThisLaunch must not carry that flag
+    /// into a new launch.
+    func testStoreThatPersistsLaunchFlagDoesNotSuppressNextLaunch() throws {
+        let store = CoordinatedRatingsFakeStore()
+        store.persistLaunchFlag = true
+        let a = try RatingsEngine(policy: policy(cooldown: 0), store: store,
+                                  activeRequestsAuthorised: true)
+        try prepare(a)
+        XCTAssertEqual(a.requestIfEligible(opportunity()) { true }, .nativeRequestInvoked)
+        XCTAssertTrue(try XCTUnwrap(store.load()).state.attemptedThisLaunch)
+        RatingsEngine.resetProcessReservationForTesting(store: store) // new process
+        let b = try RatingsEngine(policy: policy(cooldown: 0), store: store,
+                                  activeRequestsAuthorised: true)
+        try b.beginSession(now: now)
+        try b.recordConfirmedValueMoment(
+            .init(receiptID: UUID(), strength: .standard, isConfirmed: true))
+        XCTAssertEqual(b.requestIfEligible(opportunity()) { true }, .nativeRequestInvoked)
     }
 }

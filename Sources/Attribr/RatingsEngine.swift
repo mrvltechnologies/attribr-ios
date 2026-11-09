@@ -123,10 +123,12 @@ public final class RatingsEngine {
             }
             return saved
         }
-        // The current process's in-memory one-per-launch flag is not encoded
-        // into UserDefaults; keep our local flag when reading newer storage.
-        current.state.attemptedThisLaunch =
-            current.state.attemptedThisLaunch || saved.state.attemptedThisLaunch
+        // The one-per-launch flag is PROCESS-LOCAL. Never trust a stored
+        // value: a custom store that persists the whole snapshot would
+        // otherwise carry it into the next launch and suppress prompts
+        // forever. Cross-engine, same-launch duplicates are blocked by
+        // RatingsLaunchReservations, not by this flag.
+        current.state.attemptedThisLaunch = saved.state.attemptedThisLaunch
         return current
     }
 

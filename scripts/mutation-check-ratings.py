@@ -43,6 +43,7 @@ MUTS=[
  ('P1 stale failure or crash write overwrites state', E, "    private func mutate(_ edit: (inout RatingsStoreSnapshot) -> Void) throws {\n        var next = try currentSnapshot()", "    private func mutate(_ edit: (inout RatingsStoreSnapshot) -> Void) throws {\n        var next = saved"),
  ('P1 ignore stable userdefaults namespace key', ST, 'public var ratingsCoordinationKey: String { "userdefaults:" + key }', 'public var ratingsCoordinationKey: String { "userdefaults:" + UUID().uuidString }'),
  ('P1 failed read uses stale snapshot anyway', E, "            current = try currentSnapshot()\n        } catch {\n            return .persistenceUnavailable", "            current = try currentSnapshot()\n        } catch {\n            current = saved"),
+ ('P1 stored launch flag trusted across launches', E, "        current.state.attemptedThisLaunch = saved.state.attemptedThisLaunch\n", "        current.state.attemptedThisLaunch = current.state.attemptedThisLaunch || saved.state.attemptedThisLaunch\n"),
 
 ]
 def run():
