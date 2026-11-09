@@ -24,8 +24,22 @@ public enum RatingsStorageError: Error, Equatable {
 /// silently resetting it can reset a review-request cooldown.
 @MainActor
 public protocol RatingsStateStore {
+    /// Identifies ONE logical state namespace within this app process.
+    /// Engines using the same namespace must coordinate reservations.
+    /// Custom stores that expose multiple objects for the same persistent
+    /// namespace MUST override this key to return the same value.
+    var ratingsCoordinationKey: String { get }
     func load() throws -> RatingsStoreSnapshot?
     func save(_ snapshot: RatingsStoreSnapshot) throws
+}
+
+/// A default for existing reference-backed stores (including test doubles).
+/// An app-specific store with multiple handles for the same namespace must
+/// provide a shared key; the UserDefaults store does so below.
+public extension RatingsStateStore {
+    var ratingsCoordinationKey: String {
+        "instance:\(ObjectIdentifier(self as AnyObject))"
+    }
 }
 
 /// A product-local state store. This deliberately does not use Attribr's
@@ -35,6 +49,12 @@ public protocol RatingsStateStore {
 public final class RatingsUserDefaultsStore: RatingsStateStore {
     private let defaults: UserDefaults
     private let key: String
+
+    /// Two independent UserDefaults store objects pointed at the same
+    /// namespace have one launch-reservation identity. Conservatively
+    /// sharing a key across distinct preference suites with this namespace
+    /// can only suppress extra prompts, never cause an extra request.
+    public var ratingsCoordinationKey: String { "userdefaults:" + key }
 
     public init(namespace: String, defaults: UserDefaults = .standard) throws {
         guard !namespace.isEmpty, namespace.count <= 128,
