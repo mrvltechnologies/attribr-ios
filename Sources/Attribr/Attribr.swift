@@ -110,7 +110,7 @@ public final class Attribr {
             // dispatch closes the window between scheduling and sending. Only the GDPR deletion
             // endpoint is allowed without consent (the user is exercising a right, not being tracked).
             path == AttribrEndpoints.deleteUserData || consentForGate.isGranted
-        })
+        }, enforceEpoch: true)
         self.deepLinks = DeepLinkHandler(network: network, deviceId: deviceId, logger: log)
         self.skan = SKANManager(network: network, logger: log)
         // Log only the first 10 chars — that is the non-secret "attr_live_" /
