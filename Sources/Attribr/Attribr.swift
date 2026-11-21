@@ -124,7 +124,7 @@ public final class Attribr {
     /// consent session. TaskLocal carries the epoch through network awaits.
     private func scheduleTelemetry(_ work: @escaping @MainActor () async -> Void) {
         let origin = ConsentGeneration.shared.snapshot()
-        sdk.scheduleTelemetry {
+        Task {
             await AttribrTelemetryContext.$generation.withValue(origin) {
                 guard ConsentGeneration.shared.permits(origin) else { return }
                 await work()
