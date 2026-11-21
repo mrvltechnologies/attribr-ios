@@ -318,7 +318,11 @@ public final class Attribr {
             sdk.log.debug("handleDeepLink skipped — consent not granted")
             return .notAttribrLink
         }
-        return await sdk.deepLinks.handle(url)
+        let origin = ConsentGeneration.shared.snapshot()
+        return await AttribrTelemetryContext.$generation.withValue(origin) {
+            guard ConsentGeneration.shared.permits(origin) else { return .notAttribrLink }
+            return await sdk.deepLinks.handle(url)
+        }
     }
 
     /// Register with Apple's SKAdNetwork for privacy-preserving attribution.
