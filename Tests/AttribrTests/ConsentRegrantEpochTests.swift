@@ -70,7 +70,7 @@ final class ConsentRegrantEpochTests: XCTestCase {
 
     func testPurgedQueueSnapshotCannotDrainAfterRegrant() async {
         for i in 0..<4 {
-            Attribr.enqueueRevenueDiscovery(Data("{\\"i\\":\(i)}".utf8), attempts: 0)
+            Attribr.enqueueRevenueDiscovery(Data("payload-\(i)".utf8), attempts: 0)
         }
         XCTAssertEqual(Attribr.queuedEventCount, 4)
         HoldingURLProtocol.holdFirst = true
@@ -90,7 +90,7 @@ final class ConsentRegrantEpochTests: XCTestCase {
         try? await Task.sleep(nanoseconds: 100_000_000)
         HoldingURLProtocol.reset()
         HoldingURLProtocol.failTransport = true
-        let body = Data("{\\"sdk_event_id\\":\\"storekit:regrant\\":}".utf8)
+        let body = Data("regrant".utf8)
         let task = Task {
             await RevenueDiscoveryReporter.dispatch(body: body, apiKey: "k", label: "regrant")
         }
