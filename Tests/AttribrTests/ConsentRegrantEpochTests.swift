@@ -85,6 +85,18 @@ final class ConsentRegrantEpochTests: XCTestCase {
         XCTAssertEqual(Attribr.queuedEventCount, 0)
     }
 
+    func testFreshEventAfterExplicitRegrantStillSends() async {
+        Attribr.setConsent(.granted)
+        Attribr.setConsent(.revoked)
+        Attribr.setConsent(.granted)
+        try? await Task.sleep(nanoseconds: 100_000_000)
+        HoldingURLProtocol.reset()
+        Attribr.trackEvent(name: "new-consent-session", metadata: [:])
+        await until { HoldingURLProtocol.requests.count >= 1 }
+        XCTAssertEqual(HoldingURLProtocol.requests.count, 1,
+                       "new work created after regrant must remain functional")
+    }
+
     func testRevenueDiscoveryCannotRetryOrRequeueAfterRegrant() async {
         Attribr.setConsent(.granted)
         try? await Task.sleep(nanoseconds: 100_000_000)
