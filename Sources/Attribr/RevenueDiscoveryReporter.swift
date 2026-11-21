@@ -83,8 +83,14 @@ public enum RevenueDiscoveryReporter {
     /// from your `Transaction.updates` listener. Never throws, never
     /// blocks the caller; failures are logged and simply dropped.
     public static func report(transaction: StoreKit.Transaction, appAccountToken: UUID? = nil) {
+        // Retain the consent epoch before the detached task is scheduled.
+        // A later regrant cannot authorise reporting an old transaction.
+        let origin = ConsentGeneration.shared.snapshot()
         Task.detached(priority: .utility) {
-            await Self.send(transaction: transaction, appAccountToken: appAccountToken)
+            await AttribrTelemetryContext.$generation.withValue(origin) {
+                guard ConsentGeneration.shared.sameGeneration(origin) else { return }
+                await Self.send(transaction: transaction, appAccountToken: appAccountToken)
+            }
         }
     }
 
@@ -177,6 +183,7 @@ public enum RevenueDiscoveryReporter {
     /// `Attribr.enqueueRevenueDiscovery`, which refuses to queue unless consent still allows it.
     /// A request already on the wire when consent is withdrawn cannot be recalled.
     internal static func dispatch(body: Data, apiKey: String, label: String) async {
+        let origin = AttribrTelemetryContext.generation ?? ConsentGeneration.shared.snapshot()
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -188,16 +195,20 @@ public enum RevenueDiscoveryReporter {
         // parked on the SDK's durable queue. `sdk_event_id` is deterministic per transaction, so a resend is
         // deduplicated server-side. A non-429 4xx stays terminal.
         for attempt in 0..<2 {
-            guard await Attribr.isConsentGranted else {
+            guard await Attribr.isConsentGranted,
+                  ConsentGeneration.shared.permits(origin) else {
                 #if DEBUG
-                print("[RevenueDiscoveryReporter] \(label) not sent — consent not granted at dispatch")
+                print("[RevenueDiscoveryReporter] \(label) not sent — consent or original grant expired")
                 #endif
                 return
             }
             do {
                 let (_, response) = try await urlSession.data(for: request)
                 if let http = response as? HTTPURLResponse, http.statusCode == 429 || http.statusCode >= 500 {
-                    await Attribr.enqueueRevenueDiscovery(body)
+                    guard ConsentGeneration.shared.permits(origin) else { return }
+                    await AttribrTelemetryContext.$generation.withValue(origin) {
+                        await Attribr.enqueueRevenueDiscovery(body)
+                    }
                 }
                 return
             } catch {
@@ -205,7 +216,10 @@ public enum RevenueDiscoveryReporter {
                     try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
                     continue
                 }
-                await Attribr.enqueueRevenueDiscovery(body)
+                guard ConsentGeneration.shared.permits(origin) else { return }
+                await AttribrTelemetryContext.$generation.withValue(origin) {
+                    await Attribr.enqueueRevenueDiscovery(body)
+                }
             }
         }
     }

@@ -57,14 +57,19 @@ public final class SKANManager {
             SKAdNetwork.registerAppForAdNetworkAttribution()
             logger.info("SKAN 2.x/3.x registered")
         }
+        let origin = ConsentGeneration.shared.snapshot()
         Task {
-            let fetched = await fetchMappings(apiKey: apiKey)
-            if !fetched {
-                // Allow a later register() call to retry the whole flow.
-                // Re-invoking the SKAdNetwork registration calls above is
-                // harmless (they are idempotent), and this is the only way
-                // the mappings can ever be re-fetched after a failure.
-                isRegistered = false
+            await AttribrTelemetryContext.$generation.withValue(origin) {
+                guard ConsentGeneration.shared.permits(origin) else {
+                    isRegistered = false
+                    return
+                }
+                let fetched = await fetchMappings(apiKey: apiKey)
+                // Do not apply stale mappings or leave the registration stuck
+                // after an old consent session has expired.
+                if !fetched || !ConsentGeneration.shared.permits(origin) {
+                    isRegistered = false
+                }
             }
         }
 #endif
