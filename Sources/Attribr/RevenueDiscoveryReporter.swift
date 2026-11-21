@@ -195,9 +195,10 @@ public enum RevenueDiscoveryReporter {
         // parked on the SDK's durable queue. `sdk_event_id` is deterministic per transaction, so a resend is
         // deduplicated server-side. A non-429 4xx stays terminal.
         for attempt in 0..<2 {
-            guard await Attribr.isConsentGranted, ConsentGeneration.shared.permits(origin) else {
+            guard await Attribr.isConsentGranted,
+                  ConsentGeneration.shared.permits(origin) else {
                 #if DEBUG
-                print("[RevenueDiscoveryReporter] \(label) not sent — consent not granted at dispatch")
+                print("[RevenueDiscoveryReporter] \(label) not sent — consent or original grant expired")
                 #endif
                 return
             }
@@ -206,10 +207,7 @@ public enum RevenueDiscoveryReporter {
                 if let http = response as? HTTPURLResponse, http.statusCode == 429 || http.statusCode >= 500 {
                     guard ConsentGeneration.shared.permits(origin) else { return }
                     await AttribrTelemetryContext.$generation.withValue(origin) {
-                        guard ConsentGeneration.shared.permits(origin) else { return }
-                await AttribrTelemetryContext.$generation.withValue(origin) {
-                    await Attribr.enqueueRevenueDiscovery(body)
-                }
+                        await Attribr.enqueueRevenueDiscovery(body)
                     }
                 }
                 return
@@ -218,7 +216,10 @@ public enum RevenueDiscoveryReporter {
                     try? await Task.sleep(nanoseconds: retryDelayNanoseconds)
                     continue
                 }
-                await Attribr.enqueueRevenueDiscovery(body)
+                guard ConsentGeneration.shared.permits(origin) else { return }
+                await AttribrTelemetryContext.$generation.withValue(origin) {
+                    await Attribr.enqueueRevenueDiscovery(body)
+                }
             }
         }
     }
