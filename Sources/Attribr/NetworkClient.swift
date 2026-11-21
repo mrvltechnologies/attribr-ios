@@ -73,12 +73,17 @@ final class NetworkClient: @unchecked Sendable {
         } else {
             url = baseURL.appendingPathComponent(path)
         }
+        // Capture the original consent epoch at send invocation. Most SDK
+        // requests inherit the epoch recorded before their Task was scheduled.
+        // A withdrawal permanently invalidates that work even after regrant.
+        let origin = AttribrTelemetryContext.generation ?? ConsentGeneration.shared.snapshot()
         var attempt = 0
 
         while attempt < maxRetries {
             // Dispatch-time consent enforcement: consent may have been withdrawn after this call was
             // scheduled (unstructured Task, queue flush, or a retry sleeping in back-off).
-            guard consentGate(path) else {
+            guard consentGate(path),
+                  (path == AttribrEndpoints.deleteUserData || ConsentGeneration.shared.permits(origin)) else {
                 logger.debug("\(method) \(path) not sent — consent not granted at dispatch")
                 return .failure(.noConsent)
             }
