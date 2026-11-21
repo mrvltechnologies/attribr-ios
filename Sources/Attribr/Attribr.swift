@@ -45,6 +45,7 @@ public final class Attribr {
     /// poisoning the singleton for every other test in the same process. No shipping
     /// app can call this; it is not part of the public API surface.
     internal static func resetForTesting() {
+        ConsentGeneration.shared.resetForTests()
         shared = nil
         _apiKey = nil
     }
@@ -99,6 +100,7 @@ public final class Attribr {
         self.config = config
         self.log = AttribrLogger(enabled: config.debugLogging)
         self.consent = ConsentManager()
+        ConsentGeneration.shared.adoptInitialState(self.consent.state)
         self.deviceId = DeviceIdentifier()
         self.queue = EventQueue(maxSize: config.maxQueueSize, logger: log)
         let consentForGate = self.consent
@@ -115,6 +117,19 @@ public final class Attribr {
         // "attr_test_" scheme prefix. Anything longer would leak part of the
         // key material into Console.app / sysdiagnose logs.
         log.info("Attribr initialised — key prefix: \(String(apiKey.prefix(10)))")
+    }
+
+    /// Every optional telemetry Task captures permission's original epoch
+    /// before it is scheduled; a later grant never revives work from an old
+    /// consent session. TaskLocal carries the epoch through network awaits.
+    private func scheduleTelemetry(_ work: @escaping @MainActor () async -> Void) {
+        let origin = ConsentGeneration.shared.snapshot()
+        sdk.scheduleTelemetry {
+            await AttribrTelemetryContext.$generation.withValue(origin) {
+                guard ConsentGeneration.shared.permits(origin) else { return }
+                await work()
+            }
+        }
     }
 
     // MARK: - Public API
@@ -141,6 +156,9 @@ public final class Attribr {
             return
         }
         let previous = sdk.consent.state
+        // The epoch changes before the consent manager is updated so a task
+        // queued under an old grant cannot be revived by a later regrant.
+        ConsentGeneration.shared.transition(to: state)
         sdk.consent.set(state)
         sdk.log.info("Consent set to: \(state.rawValue)")
         // Withdrawal (or any move away from .granted, e.g. a host resetting a legacy implied grant to
@@ -153,7 +171,7 @@ public final class Attribr {
         }
         if state == .granted {
             // Flush any events that were queued while consent was unknown
-            Task { await sdk.flushQueue() }
+            sdk.scheduleTelemetry { await sdk.flushQueue() }
         }
     }
 
@@ -172,7 +190,7 @@ public final class Attribr {
             return
         }
         let normalizedWebClickId = (webClickId?.isEmpty == false) ? webClickId : nil
-        Task {
+        sdk.scheduleTelemetry {
             // Flush any events that failed on a previous launch before sending the
             // current one. Without this, queued events are only retried when
             // setConsent(.granted) is called again — which never happens after init.
@@ -214,7 +232,7 @@ public final class Attribr {
             sdk.log.debug("identify skipped — empty userId")
             return
         }
-        Task {
+        sdk.scheduleTelemetry {
             await sdk.sendIdentify(userId: userId)
         }
     }
@@ -238,7 +256,7 @@ public final class Attribr {
             sdk.log.debug("attributeInstall skipped — consent not granted")
             return
         }
-        Task {
+        sdk.scheduleTelemetry {
             await sdk.sendAttribution(
                 code: code,
                 source: source,
@@ -263,7 +281,7 @@ public final class Attribr {
     ) {
         guard let sdk = shared else { return }
         guard sdk.consent.isGranted else { return }
-        Task {
+        sdk.scheduleTelemetry {
             await sdk.sendEvent(
                 name: name,
                 value: value,
@@ -357,7 +375,7 @@ public final class Attribr {
             sdk.log.debug("trackAdRevenue skipped — consent not granted")
             return
         }
-        Task {
+        sdk.scheduleTelemetry {
             await sdk.sendAdRevenue(
                 adNetwork: adNetwork,
                 adUnitId: adUnitId,
@@ -396,7 +414,7 @@ public final class Attribr {
             sdk.log.debug("trackRevenue skipped — consent not granted")
             return
         }
-        Task {
+        sdk.scheduleTelemetry {
             await sdk.sendRevenue(
                 amount: amount,
                 currency: currency,
@@ -418,7 +436,7 @@ public final class Attribr {
             sdk.log.debug("registerPushToken skipped — consent not granted")
             return
         }
-        Task { await sdk.sendPushToken(tokenData) }
+        sdk.scheduleTelemetry { await sdk.sendPushToken(tokenData) }
     }
 
     /// Track a subscription or in-app purchase event.
@@ -447,7 +465,7 @@ public final class Attribr {
         if originalTransactionId == nil {
             sdk.log.debug("trackSubscriptionEvent called without originalTransactionId — duplicate events will not be deduplicated")
         }
-        Task {
+        sdk.scheduleTelemetry {
             await sdk.sendSubscriptionEvent(
                 productId: productId,
                 eventType: eventType,
@@ -497,6 +515,10 @@ public final class Attribr {
         case .unknown: guard attempts == 0 else { return }
         case .granted: break
         }
+        // A revenue-discovery callback created before withdrawal must not
+        // be re-queued after permission is granted again.
+        let origin = AttribrTelemetryContext.generation ?? ConsentGeneration.shared.snapshot()
+        guard ConsentGeneration.shared.sameGeneration(origin) else { return }
         let event = QueuedEvent(
             id: UUID().uuidString,
             kind: .revenueDiscovery,
@@ -882,6 +904,8 @@ public final class Attribr {
     private func enqueueAfterFailedSend(_ event: QueuedEvent, result: NetworkResult) {
         if case .failure(.noConsent) = result { return }
         guard consent.isGranted else { return }
+        let origin = AttribrTelemetryContext.generation ?? ConsentGeneration.shared.snapshot()
+        guard ConsentGeneration.shared.permits(origin) else { return }
         queue.enqueue(event)
     }
 
@@ -898,6 +922,7 @@ public final class Attribr {
         isFlushing = true
         defer { isFlushing = false }
 
+        let origin = AttribrTelemetryContext.generation ?? ConsentGeneration.shared.snapshot()
         let pending = queue.peek()
         guard !pending.isEmpty else { return }
         log.info("Flushing \(pending.count) queued events")
@@ -905,6 +930,7 @@ public final class Attribr {
         for event in pending {
             // Re-check before EVERY event: consent can be withdrawn while a flush is suspended in a
             // network await. Parked events stay queued (unknown) or were purged (revoked).
+            if event.kind != .delete && !ConsentGeneration.shared.permits(origin) { break }
             if !consent.isGranted && event.kind != .delete { continue }
             if event.attempts >= EventQueue.maxAttempts {
                 queue.remove(id: event.id)
@@ -933,6 +959,9 @@ public final class Attribr {
                 result = await network.post(path: path, body: event.payload)
             }
 
+            // The snapshot may have survived a revoke/regrant while awaiting
+            // a network response. Never apply an old result to new work.
+            if event.kind != .delete && !ConsentGeneration.shared.sameGeneration(origin) { break }
             switch result {
             case .success:
                 queue.remove(id: event.id)
