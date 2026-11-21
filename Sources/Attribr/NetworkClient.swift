@@ -28,10 +28,13 @@ final class NetworkClient: @unchecked Sendable {
     /// `false` ⇒ nothing is sent and `.failure(.noConsent)` is returned. The GDPR deletion endpoint is
     /// exempted by the caller's gate, never here. Default allows everything (standalone/test use).
     private let consentGate: @Sendable (String) -> Bool
+    private let enforceEpoch: Bool
 
     init(apiKey: String, config: AttribrConfiguration, logger: AttribrLogger, session: URLSession? = nil,
-         consentGate: @escaping @Sendable (String) -> Bool = { _ in true }) {
+         consentGate: @escaping @Sendable (String) -> Bool = { _ in true },
+         enforceEpoch: Bool = false) {
         self.consentGate = consentGate
+        self.enforceEpoch = enforceEpoch
         self.apiKey = apiKey
         self.baseURL = config.baseURL
         self.maxRetries = config.maxRetries
@@ -83,7 +86,8 @@ final class NetworkClient: @unchecked Sendable {
             // Dispatch-time consent enforcement: consent may have been withdrawn after this call was
             // scheduled (unstructured Task, queue flush, or a retry sleeping in back-off).
             guard consentGate(path),
-                  (path == AttribrEndpoints.deleteUserData || ConsentGeneration.shared.permits(origin)) else {
+                  (!enforceEpoch || path == AttribrEndpoints.deleteUserData ||
+                   ConsentGeneration.shared.permits(origin)) else {
                 logger.debug("\(method) \(path) not sent — consent not granted at dispatch")
                 return .failure(.noConsent)
             }
